@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact — Team Launcher</title>
+    <link rel="icon" href="img/logo.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <div class="navbar">
+        <a class="brand" href="index.html">
+            <img src="img/logo.png" alt="Logo Team Launcher">
+            Team Launcher
+        </a>
+        <nav>
+            <a href="index.html">Accueil</a>
+            <a href="presentation.html">Présentation</a>
+            <a href="equipe.html">Équipe</a>
+            <a href="telechargement.html">Téléchargement</a>
+            <a href="contact.html" class="active">Contact</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <div class="kicker">Parler au développeur</div>
+    <h1>Contact</h1>
+    <p class="lead">
+        Bug, suggestion, question ou signalement de sécurité : tous les canaux mènent
+        à la même personne. Les retours détaillés (ce que tu as fait, ce qui s'est passé,
+        le message d'erreur exact) sont traités en priorité.
+    </p>
+
+    <div class="card">
+        <div class="contact-line">
+            <span class="contact-label">Support &amp; bugs</span>
+            <span>support@teamlauncher.example — décris le problème et joins le fichier
+                  <code>%LocalAppData%\TeamLauncher\launcher.log</code></span>
+        </div>
+        <div class="contact-line">
+            <span class="contact-label">Discord</span>
+            <span><a href="#">[ lien vers ton serveur Discord ]</a> — entraide et annonces</span>
+        </div>
+        <div class="contact-line">
+            <span class="contact-label">GitHub</span>
+            <span><a href="#">[ lien vers le dépôt ]</a> — rapports de bugs et suggestions</span>
+        </div>
+        <div class="contact-line">
+            <span class="contact-label">Sécurité</span>
+            <span>security@teamlauncher.example — pour signaler une faille, en privé.
+                  Merci de ne pas publier les détails avant correction.</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <span class="icon">⏱️</span>
+        <h3>Délais de réponse</h3>
+        <p>Projet maintenu sur le temps libre : compte quelques jours pour une réponse,
+           un peu plus en période d'examen ou de mise à jour majeure de Minecraft
+           (chaque nouvelle version du jeu demande une passe de compatibilité).</p>
+    </div>
+
+    <div class="card">
+        <span class="icon">✉️</span>
+        <h3>Formulaire de contact</h3>
+        <p>Remplis ce formulaire : il ouvre ton logiciel de messagerie avec le message
+           prêt à envoyer — aucune donnée ne transite par ce site.</p>
+        <form id="contact-form" style="margin-top: 16px;">
+            <p style="margin-bottom: 8px;">
+                <label for="cf-name" style="display:block; font-size:.85rem; color: var(--muted); text-transform:uppercase; letter-spacing:1px;">Ton pseudo</label>
+                <input id="cf-name" name="name" type="text" required style="width:100%; max-width:420px; padding:10px; background:var(--panel); color:var(--text); border:2px solid var(--border); font:inherit;">
+            </p>
+            <p style="margin-bottom: 8px;">
+                <label for="cf-subject" style="display:block; font-size:.85rem; color: var(--muted); text-transform:uppercase; letter-spacing:1px;">Sujet</label>
+                <select id="cf-subject" name="subject" style="width:100%; max-width:420px; padding:10px; background:var(--panel); color:var(--text); border:2px solid var(--border); font:inherit;">
+                    <option>Bug / problème</option>
+                    <option>Suggestion</option>
+                    <option>Question</option>
+                    <option>Autre</option>
+                </select>
+            </p>
+            <p style="margin-bottom: 14px;">
+                <label for="cf-message" style="display:block; font-size:.85rem; color: var(--muted); text-transform:uppercase; letter-spacing:1px;">Message</label>
+                <textarea id="cf-message" name="message" rows="6" required
+                    placeholder="Ce que tu as fait, ce qui s'est passé, le message d'erreur exact…"
+                    style="width:100%; max-width:560px; padding:10px; background:var(--panel); color:var(--text); border:2px solid var(--border); font:inherit; resize:vertical;"></textarea>
+            </p>
+            <button class="btn btn-primary" type="submit">Envoyer</button>
+        </form>
+    </div>
+
+    <h2>Questions fréquentes</h2>
+    <div class="card">
+        <h3>Le launcher est-il gratuit ?</h3>
+        <p>Oui, totalement : pas d'abonnement, pas de pub, pas de compte « launcher » à créer.
+           Tu te connectes avec ton vrai compte Microsoft, comme sur le launcher officiel.</p>
+        <h3 style="margin-top:18px;">Est-ce que ça marche avec TLauncher / un compte cracké ?</h3>
+        <p>Non. Team Launcher exige une licence Minecraft : Java Edition officielle.
+           C'est ce qui permet la connexion Microsoft sécurisée et les skins réels.</p>
+        <h3 style="margin-top:18px;">Faut-il installer Java soi-même ?</h3>
+        <p>Non. Le bon Java est téléchargé automatiquement selon la version du jeu,
+           et mis en cache pour les lancements suivants.</p>
+        <h3 style="margin-top:18px;">Mes amis peuvent-ils rejoindre mon serveur sans être sur mon Wi-Fi ?</h3>
+        <p>Oui : l'onglet Réglages du serveur → « Ouvrir sur Internet » crée une adresse
+           publique playit.gg, sans ouvrir les ports de ta box.</p>
+        <h3 style="margin-top:18px;">Où sont stockées mes instances et mes serveurs ?</h3>
+        <p>Dans <code>%LocalAppData%\TeamLauncher</code>. Rien n'est envoyé ailleurs :
+           aucune donnée n'est collectée par le launcher.</p>
+        <h3 style="margin-top:18px;">Comment désinstaller proprement ?</h3>
+        <p>Désinstalle le launcher depuis Windows, puis supprime le dossier
+           <code>%LocalAppData%\TeamLauncher</code> si tu veux aussi effacer instances,
+           serveurs et sauvegardes.</p>
+    </div>
+
+    <div class="card">
+        <span class="icon">🔧</span>
+        <h3>Avant de écrire</h3>
+        <p>Pour un crash de Minecraft, regarde déjà la fenêtre d'analyse qui s'affiche
+           après la fermeture du jeu : elle explique souvent la cause (RAM insuffisante,
+           mod incompatible, mauvaise version de Java…) et la solution.</p>
+    </div>
+</main>
+
+<script>
+document.getElementById("contact-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = document.getElementById("cf-name").value.trim();
+    var subject = document.getElementById("cf-subject").value;
+    var message = document.getElementById("cf-message").value.trim();
+    var body = "Pseudo : " + name + "\n\n" + message;
+    window.location.href = "mailto:support@teamlauncher.example"
+        + "?subject=" + encodeURIComponent("[Team Launcher] " + subject)
+        + "&body=" + encodeURIComponent(body);
+});
+</script>
+
+<footer>
+    <div class="footer-inner">
+        <span>© 2026 Team Launcher</span>
+        <nav>
+            <a href="mentions-legales.html">Mentions légales</a>
+            <a href="confidentialite.html">Politique de confidentialité</a>
+            <a href="conditions-utilisation.html">Conditions d'utilisation</a>
+        </nav>
+    </div>
+</footer>
+
+</body>
+</html>

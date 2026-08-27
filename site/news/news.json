@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Éditeur de carte : sélection de monde par cards",
+    "date": "2026-08-27",
+    "tag": "NOUVEAU",
+    "text": "• Sélection de monde remplacée par des cartes cliquables (nom + nombre de régions)\n• Clic sur une carte → chargement automatique du monde\n• Affichage visuel de la sélection (accent vert)\n• Bouton Actualiser qui rafraîchit instances + mondes"
+  },
+  {
+    "title": "Partage de pack : lien Team Launcher",
+    "date": "2026-08-27",
+    "tag": "NOUVEAU",
+    "text": "• Le code de partage génère un lien teamlauncher://import/CODE\n• Protocole teamlauncher:// enregistré dans le registre Windows\n• Clic sur le lien ouvre directement le launcher et lance l'import\n• Support des liens profonds (deep links)"
+  },
+  {
+    "title": "Aperçu 3D des skins amélioré",
+    "date": "2026-08-27",
+    "tag": "FIX",
+    "text": "• Rendu 3D plus robuste avec timer toujours actif\n• Léger effet de perspective pour plus de réalisme\n• Fond assombri pour mieux voir le modèle\n• Rotation plus fluide (33ms au lieu de 40ms)"
+  },
+  {
+    "title": "Système de changelog automatique",
+    "date": "2026-08-27",
+    "tag": "NOUVEAU",
+    "text": "• Appelle Changelog.Add() depuis n'importe où dans le code\n• Les entrées sont sauvegardées dans changelog.json (persistant)\n• Apparaissent automatiquement dans la page Actualités du launcher\n• Les news du site se mettent à jour automatiquement via news.json"
+  },
+  {
+    "title": "Sidebar compacte et minimaliste",
+    "date": "2026-08-27",
+    "tag": "NOUVEAU",
+    "text": "• Sidebar réduite à 56px avec icônes emoji\n• Profil au-dessus de Compte / Paramètres\n• Tooltips au survol"
+  },
+  {
+    "title": "Page Instances en cartes",
+    "date": "2026-08-27",
+    "tag": "NOUVEAU",
+    "text": "• Grille de cartes horizontales\n• Clic → page détail, ✎ pour modifier\n• Bouton Jouer sur chaque carte"
+  },
+  {
+    "title": "Page détail instance style CurseForge",
+    "date": "2026-08-27",
+    "tag": "NOUVEAU",
+    "text": "• Bannière info complète\n• Onglets Description / Mods / Mondes / Shaders / RP / Screenshots"
+  },
+  {
+    "title": "Explorateur et Skins refaits",
+    "date": "2026-08-27",
+    "tag": "FIX",
+    "text": "• Explorateur : style moderne en liste\n• Skins : thumbnails arrondies, propre"
+  }
+]

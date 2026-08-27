@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Launcher — Un launcher Minecraft léger, complet, sans fioritures</title>
+    <link rel="icon" href="img/logo.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <div class="navbar">
+        <a class="brand" href="index.html">
+            <img src="img/logo.png" alt="Logo Team Launcher">
+            Team Launcher
+        </a>
+        <nav>
+            <a href="index.html" class="active">Accueil</a>
+            <a href="presentation.html">Présentation</a>
+            <a href="equipe.html">Équipe</a>
+            <a href="telechargement.html">Téléchargement</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div>
+            <div class="kicker">Launcher Minecraft Java — gratuit et open</div>
+            <h1>Ton jeu. Tes instances.<br>Sans usine à gaz.</h1>
+            <p class="lead">
+                Team Launcher gère tes instances Forge, Fabric, NeoForge et Vanilla,
+                héberge tes propres serveurs, connecte ton vrai compte Microsoft —
+                le tout dans une fenêtre qui démarre plus vite que le jeu lui-même.
+            </p>
+            <p style="margin-top: 26px;">
+                <a class="btn btn-primary btn-big" href="telechargement.html">Télécharger
+                    <span class="sub">Windows 10 / 11 — tout inclus</span>
+                </a>
+            </p>
+            <div class="badge-row">
+                <span class="badge">Gratuit</span>
+                <span class="badge">Sans compte launcher</span>
+                <span class="badge">Connexion Microsoft officielle</span>
+                <span class="badge">~65 Mo, tout inclus</span>
+            </div>
+        </div>
+        <div class="hero-shot">
+            <img src="img/capture-accueil.png" alt="Capture d'écran du launcher Team Launcher">
+        </div>
+    </section>
+
+    <h2>Ce qu'il fait mieux que les autres</h2>
+    <div class="grid-3">
+        <div class="card">
+            <span class="icon">🗂️</span>
+            <h3>Instances sans douleur</h3>
+            <p>Crée, duplique, importe (CurseForge, Modrinth .mrpack) et répare
+               tes instances. Mods, mondes, screenshots : tout est à sa place.</p>
+        </div>
+        <div class="card">
+            <span class="icon">🗄️</span>
+            <h3>Héberge ton serveur</h3>
+            <p>Vanilla, Fabric, Forge ou NeoForge en 3 clics. Importe ta map,
+               ouvre le tunnel Internet, partage l'adresse. Ta box reste fermée.</p>
+        </div>
+        <div class="card">
+            <span class="icon">🔐</span>
+            <h3>Vrai compte Microsoft</h3>
+            <p>Connexion officielle par code d'appareil : pseudo et skin récupérés
+               automatiquement. Aucune configuration, aucun fichier à bricoler.</p>
+        </div>
+    </div>
+
+    <h2>Pensé pour rester léger</h2>
+    <div class="card">
+        <ul class="checklist">
+            <li>Démarrage instantané — pas de pub, pas de page d'accueil qui charge 10 secondes</li>
+            <li>Fichiers officiels Mojang vérifiés par hash, mis en cache entre les lancements</li>
+            <li>Java téléchargé automatiquement selon la version du jeu</li>
+            <li>Analyse de crash en clair : tu sais pourquoi ça a planté</li>
+            <li>Mises à jour automatiques intégrées</li>
+        </ul>
+    </div>
+
+    <h2>Dernières actualités</h2>
+    <div id="news-feed" class="news-feed">
+        <p class="news-loading">Chargement des actualités…</p>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <span>© 2026 Team Launcher</span>
+        <nav>
+            <a href="mentions-legales.html">Mentions légales</a>
+            <a href="confidentialite.html">Politique de confidentialité</a>
+            <a href="conditions-utilisation.html">Conditions d'utilisation</a>
+        </nav>
+    </div>
+</footer>
+
+<script src="js/news.js"></script>
+</body>
+</html>

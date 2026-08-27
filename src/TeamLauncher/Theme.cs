@@ -1,0 +1,166 @@
+using System.Drawing.Drawing2D;
+using System.Drawing.Text;
+
+namespace TeamLauncher;
+
+/// <summary>
+/// Thème minimaliste sombre neutre : fond quasi-noir, cartes gris très sombre,
+/// un seul accent froid. Pas de bordures visibles, coins peu arrondis, typographie sobre.
+/// </summary>
+public static class Theme
+{
+    // Couleurs par défaut (surchargeables depuis Paramètres)
+    private const string DefaultBg = "#0b0d10";
+    private const string DefaultCard = "#15181d";
+    private const string DefaultAccent = "#7aa2f7";
+
+    // Anciennes valeurs du thème "Minecraft" à ignorer
+    private static readonly HashSet<string> LegacyColors = new(StringComparer.OrdinalIgnoreCase)
+        { "#141519", "#23262c", "#6fbf3f" };
+
+    public static Color Bg { get; private set; }
+    public static Color Card { get; private set; }
+    public static Color Panel => ControlPaint.Dark(Card, 0.04f);
+    public static Color Border => Color.FromArgb(28, 255, 255, 255); // séparateur très discret
+    public static Color Accent { get; private set; }
+    public static Color AccentHover => ControlPaint.Light(Accent, 0.10f);
+    public static Color AccentDim => ControlPaint.Dark(Accent, 0.45f);
+    public static Color Hover => ControlPaint.Light(Card, 0.04f);
+    public static Color Text { get; private set; } = FromHex("#e6e8eb");
+    public static Color TextDim { get; private set; } = FromHex("#8b919a");
+
+    public static Font Title => new("Segoe UI", 13f, FontStyle.Regular);
+
+    static Theme() => Reload();
+
+    public static void Reload()
+    {
+        var s = DataStore.Settings;
+        Bg = ParseOr(Clean(s.BgColor), DefaultBg);
+        Card = ParseOr(Clean(s.CardColor), DefaultCard);
+        Accent = ParseOr(Clean(s.AccentColor), DefaultAccent);
+        LoadBackground();
+    }
+
+    private static string Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) || LegacyColors.Contains(value.Trim()) ? "" : value.Trim();
+
+    // ---- image de fond personnalisée ----
+    private static Image? bgImage;
+    private static MemoryStream? bgStream;
+
+    public static Image? BgImage => bgImage;
+    public static bool HasBgImage => bgImage != null;
+
+    private static void LoadBackground()
+    {
+        bgImage?.Dispose();
+        bgImage = null;
+        bgStream?.Dispose();
+        bgStream = null;
+
+        string p = DataStore.Settings.BackgroundImagePath ?? "";
+        if (p.Length == 0 || !File.Exists(p)) return;
+        try
+        {
+            bgStream = new MemoryStream(File.ReadAllBytes(p));
+            bgImage = Image.FromStream(bgStream);
+        }
+        catch { bgImage = null; }
+    }
+
+    public static void SetBackground(string sourcePath)
+    {
+        string dest = Path.Combine(DataStore.ImagesDir, "background" + Path.GetExtension(sourcePath).ToLowerInvariant());
+        Directory.CreateDirectory(DataStore.ImagesDir);
+        File.Copy(sourcePath, dest, overwrite: true);
+        DataStore.Settings.BackgroundImagePath = dest;
+        DataStore.Save();
+        Reload();
+    }
+
+    public static void ClearBackground()
+    {
+        DataStore.Settings.BackgroundImagePath = "";
+        DataStore.Save();
+        try
+        {
+            foreach (var f in Directory.GetFiles(DataStore.ImagesDir, "background.*"))
+                File.Delete(f);
+        }
+        catch { }
+        Reload();
+    }
+
+    public static void Save(string bg, string card, string accent)
+    {
+        var s = DataStore.Settings;
+        s.BgColor = bg; s.CardColor = card; s.AccentColor = accent;
+        DataStore.Save();
+        Reload();
+    }
+
+    // ---- style des contrôles ----
+
+    /// <summary>Carte minimaliste : coins légèrement arrondis, pas de bordure dessinée.</summary>
+    public static void Blockify(Control c) => Round(c, 6);
+
+    /// <summary>Coins arrondis (réappliqués au redimensionnement).</summary>
+    public static void Round(Control c, int radius)
+    {
+        void Apply()
+        {
+            if (c.Width <= 0 || c.Height <= 0) return;
+            int r = Math.Min(radius, Math.Min(c.Width, c.Height) / 2);
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            path.AddArc(0, 0, r, r, 180, 90);
+            path.AddArc(c.Width - r - 1, 0, r, r, 270, 90);
+            path.AddArc(c.Width - r - 1, c.Height - r - 1, r, r, 0, 90);
+            path.AddArc(0, c.Height - r - 1, r, r, 90, 90);
+            path.CloseFigure();
+            c.Region?.Dispose();
+            c.Region = new Region(path);
+        }
+        c.Resize += (_, _) => Apply();
+        Apply();
+    }
+
+    public static void Apply(Button b, bool primary = false)
+    {
+        b.FlatStyle = FlatStyle.Flat;
+        b.FlatAppearance.BorderSize = 0;
+        b.FlatAppearance.MouseOverBackColor = primary ? AccentHover : Hover;
+        b.BackColor = primary ? Accent : ControlPaint.Light(Card, 0.04f);
+        b.ForeColor = primary ? OnColor(Accent) : Text;
+        b.Cursor = Cursors.Hand;
+        b.Font = new Font("Segoe UI", 9f);
+        b.Height = Math.Min(Math.Max(b.Height, 28), 34);
+        Round(b, 5);
+    }
+
+    private static Color OnColor(Color bg) =>
+        (bg.R * 299 + bg.G * 587 + bg.B * 114) / 1000 > 150
+            ? Color.FromArgb(18, 20, 16)
+            : Color.White;
+
+    // ---------------- helpers couleurs ----------------
+
+    private static Color ParseOr(string? value, string fallback) =>
+        !string.IsNullOrWhiteSpace(value) && TryParse(value.Trim(), out var c) ? c : FromHex(fallback);
+
+    private static bool TryParse(string hex, out Color color)
+    {
+        try
+        {
+            if (hex.StartsWith('#')) hex = hex[1..];
+            color = Color.FromArgb(
+                Convert.ToInt32(hex[..2], 16),
+                Convert.ToInt32(hex.Substring(2, 2), 16),
+                Convert.ToInt32(hex.Substring(4, 2), 16));
+            return true;
+        }
+        catch { color = default; return false; }
+    }
+
+    private static Color FromHex(string hex) { TryParse(hex, out var c); return c; }
+}

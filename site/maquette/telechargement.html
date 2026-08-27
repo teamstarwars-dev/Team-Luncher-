@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Téléchargement — Team Launcher</title>
+    <link rel="icon" href="img/logo.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <div class="navbar">
+        <a class="brand" href="index.html">
+            <img src="img/logo.png" alt="Logo Team Launcher">
+            Team Launcher
+        </a>
+        <nav>
+            <a href="index.html">Accueil</a>
+            <a href="presentation.html">Présentation</a>
+            <a href="equipe.html">Équipe</a>
+            <a href="telechargement.html" class="active">Téléchargement</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <div class="kicker">Installation</div>
+    <h1>Télécharger Team Launcher</h1>
+    <p class="lead">
+        Version complète « tout inclus » : rien d'autre à installer, ni Java ni runtime.
+        Décompresse si besoin, double-clique, joue.
+    </p>
+
+    <div class="dl-box">
+        <p style="margin-bottom: 20px;">
+            <!-- Chemin relatif vers l'exécutable autonome du dépôt.
+                 En production, remplace par l'URL de ton serveur / GitHub Releases. -->
+            <a class="btn btn-primary btn-big"
+               href="../../dist-autonome/TeamLauncher.exe" download>
+                Télécharger Team Launcher pour Windows
+                <span class="sub">Version autonome · ~65 Mo · Windows 10/11 64 bits</span>
+            </a>
+        </p>
+        <p class="dl-note">
+            ✔ Aucune publicité &nbsp;·&nbsp; ✔ Aucune donnée collectée &nbsp;·&nbsp;
+            ✔ Connexion Microsoft officielle intégrée
+        </p>
+        <!-- Hash SHA-256 de dist-autonome/TeamLauncher.exe : à régénérer après chaque
+             rebuild (Get-FileHash TeamLauncher.exe -Algorithm SHA256) -->
+        <p class="dl-note" style="margin-top: 10px;">
+            Vérifier l'intégrité du fichier (SHA-256) :<br>
+            <code style="font-size: .72rem; word-break: break-all;">CEDAF757F6F34C5A0C5E25B9445A830EF095730CB03CE1738C36C146262C2906</code><br>
+            <span style="opacity:.75;">PowerShell : <code>Get-FileHash TeamLauncher.exe</code></span>
+        </p>
+    </div>
+
+    <h2>Installation en 3 étapes</h2>
+    <ol class="steps">
+        <li><strong>Télécharge</strong> le fichier ci-dessus (c'est la version la plus
+            complète, donc la plus lourde : elle contient tout ce qu'il faut pour démarrer
+            sur n'importe quel PC).</li>
+        <li><strong>Lance</strong> <code>TeamLauncher.exe</code>.
+            Windows peut afficher un avertissement SmartScreen les premiers jours :
+            clique sur « Informations complémentaires » → « Exécuter quand même ».</li>
+        <li><strong>Connecte-toi</strong> avec ton compte Microsoft officiel
+            (ou choisis le mode hors-ligne), crée une instance, et c'est parti.</li>
+    </ol>
+
+    <h2>Configuration requise</h2>
+    <table>
+        <tr><th></th><th>Minimum</th><th>Recommandé</th></tr>
+        <tr><td>Système</td><td>Windows 10 64 bits</td><td>Windows 11 64 bits</td></tr>
+        <tr><td>Mémoire</td><td>4 Go de RAM</td><td>8 Go de RAM (6 allouables au jeu)</td></tr>
+        <tr><td>Espace disque</td><td>1 Go + taille des versions jouées</td><td>10 Go libres</td></tr>
+        <tr><td>Java</td><td colspan="2">Rien à installer : le launcher télécharge automatiquement le bon.</td></tr>
+    </table>
+
+    <h2>Questions fréquentes</h2>
+    <div class="card">
+        <h3>Pourquoi ~65 Mo ?</h3>
+        <p>C'est la version autonome : elle embarque tout le nécessaire pour tourner sur
+           n'importe quel Windows sans dépendance. Tu n'as rien d'autre à télécharger avant
+           de pouvoir la lancer — c'est voulu.</p>
+    </div>
+    <div class="card">
+        <h3>Mon antivirus s'affole, pourquoi ?</h3>
+        <p>Les launchers touchent aux fichiers du jeu et au réseau : certains antivirus sont
+           méfiants par défaut. Ajoute simplement une exclusion pour le dossier de
+           Team Launcher. Le launcher ne collecte aucune donnée.</p>
+    </div>
+    <div class="card">
+        <h3>Est-ce que ça marche avec mon compte cracké ?</h3>
+        <p>Non. Team Launcher utilise uniquement la connexion Microsoft officielle
+           (ou un mode hors-ligne limité au solo). Il ne contourne jamais les serveurs
+           d'authentification.</p>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <span>© 2026 Team Launcher</span>
+        <nav>
+            <a href="mentions-legales.html">Mentions légales</a>
+            <a href="confidentialite.html">Politique de confidentialité</a>
+            <a href="conditions-utilisation.html">Conditions d'utilisation</a>
+        </nav>
+    </div>
+</footer>
+
+</body>
+</html>

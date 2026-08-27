@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Présentation — Team Launcher</title>
+    <link rel="icon" href="img/logo.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <div class="navbar">
+        <a class="brand" href="index.html">
+            <img src="img/logo.png" alt="Logo Team Launcher">
+            Team Launcher
+        </a>
+        <nav>
+            <a href="index.html">Accueil</a>
+            <a href="presentation.html" class="active">Présentation</a>
+            <a href="equipe.html">Équipe</a>
+            <a href="telechargement.html">Téléchargement</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <div class="kicker">Le projet</div>
+    <h1>Un launcher qui fait tout, sans faire trop</h1>
+    <p class="lead">
+        Team Launcher est né d'un constat simple : les launchers populaires sont devenus
+        des plateformes lourdes, remplies de boutons qu'on n'utilise jamais.
+        Celui-ci se concentre sur trois choses et le fait bien : jouer, modder, héberger.
+    </p>
+
+    <h2>Ce qu'il gère</h2>
+    <div class="grid-2">
+        <div class="card">
+            <span class="icon">🕹️</span>
+            <h3>Jouer</h3>
+            <p>Toutes les versions Vanilla officielles, Forge, Fabric, NeoForge et Quilt.
+               Java adapté téléchargé automatiquement. Connexion Microsoft officielle
+               avec skin et pseudo réels, ou mode hors-ligne.</p>
+        </div>
+        <div class="card">
+            <span class="icon">🔧</span>
+            <h3>Modder</h3>
+            <p>Bibliothèque de mods par instance, import CurseForge et Modrinth (.mrpack),
+               skins avec aperçu 3D, mondes sauvegardés et nettoyables,
+               options de RAM et d'arguments JVM par instance.</p>
+        </div>
+        <div class="card">
+            <span class="icon">🗄️</span>
+            <h3>Héberger</h3>
+            <p>Serveurs Vanilla, Fabric, Forge ou NeoForge créés depuis le launcher :
+               console en direct, commandes, import de map, icône, mods serveur,
+               sauvegardes automatiques, redémarrage programmé.</p>
+        </div>
+        <div class="card">
+            <span class="icon">👥</span>
+            <h3>Jouer à plusieurs</h3>
+            <p>Tunnel Internet intégré (playit.gg) : tes amis rejoignent ton serveur
+               avec une adresse publique, sans ouvrir les ports de ta box ni toucher
+               à la configuration du routeur.</p>
+        </div>
+    </div>
+
+    <h2>Face aux autres launchers</h2>
+    <table>
+        <tr><th></th><th>Team Launcher</th><th>Gros launchers « plateforme »</th></tr>
+        <tr><td>Poids au démarrage</td><td class="ok">Léger, quasi instantané</td><td class="no">Lourd (Electron / pub)</td></tr>
+        <tr><td>Publicité intégrée</td><td class="ok">Aucune</td><td class="no">Fréquente</td></tr>
+        <tr><td>Serveurs hébergés</td><td class="ok">Intégrés + tunnel Internet</td><td class="no">Non proposé</td></tr>
+        <tr><td>Compte Microsoft</td><td class="ok">Officiel, sans configuration</td><td class="ok">Oui, généralement</td></tr>
+        <tr><td>Explication des crashs</td><td class="ok">En français, action par action</td><td class="no">Journal brut</td></tr>
+        <tr><td>Vie privée</td><td class="ok">Aucune donnée collectée</td><td class="no">Variable</td></tr>
+    </table>
+
+    <h2>Sous le capot</h2>
+    <div class="grid-2">
+        <div class="card">
+            <h3>Fichiers officiels uniquement</h3>
+            <p>Chaque version de Minecraft, bibliothèque et asset vient des serveurs Mojang,
+               vérifié par hash SHA-1 et mis en cache localement pour ne rien retélécharger.</p>
+        </div>
+        <div class="card">
+            <h3>Sécurité du compte</h3>
+            <p>Le jeton de connexion est chiffré avec DPAPI, lié au compte Windows de
+               l'utilisateur. Il ne quitte jamais la machine et se supprime à la déconnexion.</p>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <span>© 2026 Team Launcher</span>
+        <nav>
+            <a href="mentions-legales.html">Mentions légales</a>
+            <a href="confidentialite.html">Politique de confidentialité</a>
+            <a href="conditions-utilisation.html">Conditions d'utilisation</a>
+        </nav>
+    </div>
+</footer>
+
+</body>
+</html>

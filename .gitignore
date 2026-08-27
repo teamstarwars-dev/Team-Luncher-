@@ -1,0 +1,18 @@
+# Build
+build/
+dist/
+dist-autonome/
+bin/
+obj/
+
+# Logs
+*.log
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Runtime / caches locaux
+*.jar

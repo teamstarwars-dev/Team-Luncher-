@@ -34,14 +34,15 @@ public class BedrockPage : UserControl, IRefreshable
 
         root.Controls.Add(new Label
         {
-            Text = "CHANGER DE MINECRAFT", ForeColor = Theme.Text,
+            Text = Lang.T("CHANGER DE MINECRAFT", "SWITCH MINECRAFT"), ForeColor = Theme.Text,
             Font = Theme.Title,
             AutoSize = true
         });
         root.Controls.Add(new Label
         {
-            Text = "Ton launcher gère Minecraft JAVA. Bascule ici sur Minecraft BEDROCK\n" +
-                   "(édition Microsoft Store, cross-play mobile / console / PC).",
+            Text = Lang.T("Ton launcher gère Minecraft JAVA. Bascule ici sur Minecraft BEDROCK\n" +
+                   "(édition Microsoft Store, cross-play mobile / console / PC).", "Your launcher manages Minecraft JAVA. Switch to Minecraft BEDROCK here\n" +
+                   "(Microsoft Store edition, cross-play mobile / console / PC)."),
             ForeColor = Theme.TextDim, AutoSize = true
         });
 

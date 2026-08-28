@@ -40,7 +40,7 @@ public static class InstanceCard
 
         var meta = new Label
         {
-            Text = $"{inst.Loader} • Minecraft {inst.McVersion} • {inst.Launches} lancement(s)",
+            Text = $"{inst.Loader} • Minecraft {inst.McVersion} • {string.Format(Lang.T("{0} lancement(s)", "{0} launch(es)"), inst.Launches)}",
             ForeColor = Theme.Accent,
             Font = new Font("Segoe UI", 8f),
             AutoEllipsis = true,

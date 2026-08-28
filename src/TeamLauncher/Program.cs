@@ -19,7 +19,7 @@ internal static class Program
 
         if (!DataStore.Settings.OnboardingDone || string.IsNullOrEmpty(DataStore.Settings.AccountMode))
         {
-            using var dialog = new OnboardingDialog();
+            using var dialog = new OnboardingDialog { SkipImport = true };
             if (dialog.ShowDialog() != DialogResult.OK)
                 return;
         }

@@ -24,19 +24,19 @@ public class AccountPage : UserControl, IRefreshable
 
         var title = new Label
         {
-            Text = "Compte",
+            Text = Lang.T("Compte", "Account"),
             ForeColor = Theme.Text,
             Font = Theme.Title,
             AutoSize = true
         };
         var hint = new Label
         {
-            Text = "Choisis ton mode de connexion. Tu peux aussi le changer au lancement du launcher.",
+            Text = Lang.T("Choisis ton mode de connexion. Tu peux aussi le changer au lancement du launcher.", "Choose your login method. You can also change it at launcher startup."),
             ForeColor = Theme.TextDim,
             AutoSize = true
         };
 
-        msRadio.Text = "Compte Microsoft officiel (recommandé)";
+        msRadio.Text = Lang.T("Compte Microsoft officiel (recommandé)", "Official Microsoft account (recommended)");
         msRadio.ForeColor = Theme.Text;
         msRadio.AutoSize = true;
         msRadio.Margin = new Padding(0, 14, 0, 0);
@@ -50,7 +50,7 @@ public class AccountPage : UserControl, IRefreshable
             AutoSize = true
         };
 
-        var msLoginBtn = new Button { Text = "Se connecter maintenant avec Microsoft", Width = 320, Height = 40 };
+        var msLoginBtn = new Button { Text = Lang.T("Se connecter maintenant avec Microsoft", "Sign in with Microsoft now"), Width = 320, Height = 40 };
         Theme.Apply(msLoginBtn);
         msLoginBtn.Margin = new Padding(20, 8, 0, 0);
         msLoginBtn.Click += async (_, _) =>
@@ -62,10 +62,10 @@ public class AccountPage : UserControl, IRefreshable
             DataStore.Save();
             AppEvents.NotifyAccountChanged();
             RefreshData();
-            MessageBox.Show(
-                $"Connecté en tant que {session.Name} !\n\n" +
-                "Ton vrai pseudo et ton skin seront utilisés en jeu.",
-                "Team Launcher", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(
+                    $"Connecté en tant que {session.Name} !\n\n" +
+                    Lang.T("Ton vrai pseudo et ton skin seront utilisés en jeu.", "Your real username and skin will be used in-game."),
+                    "Team Launcher", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
 
         var msLogoutBtn = new Button { Text = "⏻ Se déconnecter de Microsoft", Width = 320, Height = 40 };
@@ -79,18 +79,21 @@ public class AccountPage : UserControl, IRefreshable
             AppEvents.NotifyAccountChanged();
             RefreshData();
             MessageBox.Show(
-                "Tu es déconnecté de Microsoft (jeton supprimé de ce PC).\n" +
+                Lang.T("Tu es déconnecté de Microsoft (jeton supprimé de ce PC).\n" +
                 "Le launcher est repassé en mode hors-ligne : choisis ton pseudo puis Appliquer.\n" +
                 "Tu peux te reconnecter à tout moment avec le bouton ci-dessus.",
+                "You've been signed out of Microsoft (token removed from this PC).\n" +
+                "The launcher has switched to offline mode: choose your username and click Apply.\n" +
+                "You can sign back in at any time with the button above."),
                 "Team Launcher");
         };
 
-        offRadio.Text = "Jouer hors-ligne (pseudo local)";
+        offRadio.Text = Lang.T("Jouer hors-ligne (pseudo local)", "Play offline (local username)");
         offRadio.ForeColor = Theme.Text;
         offRadio.AutoSize = true;
         offRadio.Margin = new Padding(0, 14, 0, 0);
 
-        pseudoBox.PlaceholderText = "Pseudo";
+        pseudoBox.PlaceholderText = Lang.T("Pseudo", "Username");
         pseudoBox.Width = 280;
         pseudoBox.Font = new Font("Segoe UI", 11f);
         pseudoBox.Margin = new Padding(20, 8, 0, 0);
@@ -166,7 +169,7 @@ public class SettingsPage : UserControl, IRefreshable
 
         var title = new Label
         {
-            Text = "Paramètres",
+            Text = Lang.T("Paramètres", "Settings"),
             Dock = DockStyle.Top,
             Height = 44,
             ForeColor = Theme.Text,
@@ -200,7 +203,7 @@ public class SettingsPage : UserControl, IRefreshable
         var advancedItems = new List<Control>();
 
         javaBox.Width = 420;
-        javaBox.PlaceholderText = "Chemin de Java (vide = détection automatique)";
+        javaBox.PlaceholderText = Lang.T("Chemin de Java (vide = détection automatique)", "Java path (empty = auto-detect)");
 
         ramBox.Minimum = 1;
         ramBox.Maximum = 32;
@@ -210,7 +213,7 @@ public class SettingsPage : UserControl, IRefreshable
         dirBox.Width = 420;
         dirBox.ReadOnly = true;
 
-        var save = new Button { Text = "Enregistrer les paramètres", Width = 240, Height = 42 };
+        var save = new Button { Text = Lang.T("Enregistrer les paramètres", "Save settings"), Width = 240, Height = 42 };
         Theme.Apply(save, primary: true);
         save.Margin = new Padding(0, 16, 0, 0);
         save.Click += (_, _) =>
@@ -218,7 +221,9 @@ public class SettingsPage : UserControl, IRefreshable
             DataStore.Settings.JavaPath = javaBox.Text.Trim();
             DataStore.Settings.MaxRamGb = (int)ramBox.Value;
             DataStore.Save();
-            MessageBox.Show("Paramètres enregistrés. Si tu as changé les couleurs, redémarre le launcher pour les appliquer.", "Team Launcher");
+            if (MessageBox.Show("Paramètres enregistrés. Redémarrer pour appliquer ?", "Team Launcher",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                Lang.RestartApp();
         };
 
         generalItems.AddRange(new Control[]
@@ -243,13 +248,15 @@ public class SettingsPage : UserControl, IRefreshable
         colorsRow.Controls.Add(ColorButton("Cartes / panneaux", () => Theme.Card));
         colorsRow.Controls.Add(ColorButton("Accent (boutons)", () => Theme.Accent));
 
-        var resetColors = new Button { Text = "Couleurs par défaut", Width = 180, Height = 36, Margin = new Padding(10, 3, 0, 0) };
+        var resetColors = new Button { Text = Lang.T("Couleurs par défaut", "Default colors"), Width = 180, Height = 36, Margin = new Padding(10, 3, 0, 0) };
         Theme.Apply(resetColors);
         resetColors.Click += (_, _) =>
         {
             Theme.Save("", "", "");
             UpdateColorPreview();
-            MessageBox.Show("Couleurs réinitialisées. Redémarre le launcher pour tout appliquer.", "Team Launcher");
+            if (MessageBox.Show("Couleurs réinitialisées. Redémarrer pour appliquer ?", "Team Launcher",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                Lang.RestartApp();
         };
 
         appearanceItems.AddRange(new Control[]
@@ -284,7 +291,9 @@ public class SettingsPage : UserControl, IRefreshable
             {
                 Theme.SetBackground(dlg.FileName);
                 RefreshBgLabel();
-                MessageBox.Show("Image enregistrée ! Redémarre le launcher pour l'appliquer.", "Team Launcher");
+                if (MessageBox.Show("Image enregistrée ! Redémarrer pour l'appliquer ?", "Team Launcher",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    Lang.RestartApp();
             }
             catch (Exception ex)
             {
@@ -292,13 +301,15 @@ public class SettingsPage : UserControl, IRefreshable
             }
         };
 
-        var bgClearBtn = new Button { Text = "Retirer l'image", Width = 160, Height = 36, Margin = new Padding(10, 0, 0, 0) };
+        var bgClearBtn = new Button { Text = Lang.T("Retirer l'image", "Remove image"), Width = 160, Height = 36, Margin = new Padding(10, 0, 0, 0) };
         Theme.Apply(bgClearBtn);
         bgClearBtn.Click += (_, _) =>
         {
             Theme.ClearBackground();
             RefreshBgLabel();
-            MessageBox.Show("Image retirée. Redémarre le launcher pour tout appliquer.", "Team Launcher");
+            if (MessageBox.Show("Image retirée. Redémarrer pour tout appliquer ?", "Team Launcher",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                Lang.RestartApp();
         };
 
         var bgRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
@@ -307,7 +318,7 @@ public class SettingsPage : UserControl, IRefreshable
         appearanceItems.AddRange(new Control[] { bgRow, bgFileLabel });
 
         // ---- Compteur FPS en jeu (optionnel) ----
-        fpsCheck.Text = "Compteur FPS/RAM en jeu (optionnel) — installe un petit mod dans chaque instance compatible";
+        fpsCheck.Text = Lang.T("Compteur FPS/RAM en jeu (optionnel) — installe un petit mod dans chaque instance compatible", "In-game FPS/RAM counter (optional) — installs a small mod in each compatible instance");
         fpsCheck.ForeColor = Theme.Text;
         fpsCheck.AutoSize = true;
         fpsCheck.Margin = new Padding(0, 12, 0, 0);
@@ -328,7 +339,7 @@ public class SettingsPage : UserControl, IRefreshable
         discordCheck.Margin = new Padding(0, 6, 0, 0);
 
         discordBox.Width = 420;
-        discordBox.PlaceholderText = "ID d'application Discord (discord.com/developers/applications)";
+        discordBox.PlaceholderText = Lang.T("ID d'application Discord (discord.com/developers/applications)", "Discord Application ID (discord.com/developers/applications)");
 
         var discordSave = new Button { Text = "Appliquer", Width = 160, Height = 34 };
         Theme.Apply(discordSave);
@@ -374,15 +385,15 @@ public class SettingsPage : UserControl, IRefreshable
             AutoSize = true,
             Margin = new Padding(0, 6, 0, 2)
         };
-        var checkUpdateBtn = new Button { Text = "Vérifier maintenant", Width = 180, Height = 36 };
+        var checkUpdateBtn = new Button { Text = Lang.T("Vérifier maintenant", "Check now"), Width = 180, Height = 36 };
         Theme.Apply(checkUpdateBtn);
         checkUpdateBtn.Click += async (_, _) =>
         {
             checkUpdateBtn.Enabled = false;
-            checkUpdateBtn.Text = "Vérification...";
+            checkUpdateBtn.Text = Lang.T("Vérification...", "Checking...");
             string result = await UpdateChecker.CheckNowAsync();
             checkUpdateBtn.Enabled = true;
-            checkUpdateBtn.Text = "Vérifier maintenant";
+            checkUpdateBtn.Text = Lang.T("Vérifier maintenant", "Check now");
             if (result.Length > 0)
                 MessageBox.Show(result, "Team Launcher — Mises à jour");
         };
@@ -391,7 +402,7 @@ public class SettingsPage : UserControl, IRefreshable
         // ---- Actualités + langue ----
         generalItems.Add(SectionHeader("ACTUALITÉS & LANGUE"));
         var newsBox = new TextBox { Width = 420 };
-        newsBox.PlaceholderText = "URL des actualités (fichier JSON : title, date, tag, text)";
+        newsBox.PlaceholderText = Lang.T("URL des actualités (fichier JSON : title, date, tag, text)", "News URL (JSON file: title, date, tag, text)");
         newsBox.Text = DataStore.Settings.NewsUrl;
         var langBox = new ComboBox
         {
@@ -415,25 +426,9 @@ public class SettingsPage : UserControl, IRefreshable
             DataStore.Settings.Language = langBox.SelectedIndex == 1 ? "en" : "fr";
             DataStore.Save();
 
-            // Changement de langue (ou d'URL d'actu) : la langue s'applique partout
-            // au prochain démarrage, alors le launcher se relance tout seul.
             if (DataStore.Settings.Language != oldLang)
             {
-                try
-                {
-                    string? exe = Environment.ProcessPath;
-                    if (exe != null)
-                    {
-                        Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
-                        FindForm()?.Close();
-                        Application.Exit();
-                        return;
-                    }
-                }
-                catch { }
-                MessageBox.Show(
-                    "Enregistré ! Redémarre le launcher pour que la langue s'applique partout.",
-                    "Team Launcher");
+                Lang.RestartApp();
                 return;
             }
 
@@ -443,7 +438,7 @@ public class SettingsPage : UserControl, IRefreshable
         // ---- Clé API CurseForge ----
         integrationItems.Add(SectionHeader("CURSEFORGE"));
         var cfBox = new TextBox { Width = 420 };
-        cfBox.PlaceholderText = "Clé API CurseForge (console.curseforge.com — gratuite)";
+        cfBox.PlaceholderText = Lang.T("Clé API CurseForge (console.curseforge.com — gratuite)", "CurseForge API key (console.curseforge.com — free)");
         cfBox.Text = DataStore.Settings.CurseForgeApiKey;
         cfBox.UseSystemPasswordChar = true;
         var cfBtn = new Button { Text = "Enregistrer", Width = 160, Height = 36 };

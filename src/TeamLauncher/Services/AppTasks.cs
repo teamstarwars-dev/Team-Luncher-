@@ -45,7 +45,7 @@ public static class AppTasks
     {
         int id;
         var cts = new CancellationTokenSource();
-        var entry = new Entry { Id = 0, Title = title, Cts = cts, Status = "Démarrage…" };
+        var entry = new Entry { Id = 0, Title = title, Cts = cts, Status = Lang.T("Démarrage…", "Starting…") };
         lock (Lock)
         {
             id = ++_nextId;

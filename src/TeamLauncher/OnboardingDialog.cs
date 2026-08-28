@@ -20,6 +20,8 @@ public class OnboardingDialog : Form
     // dossiers candidats détectés sur le PC (instances Minecraft existantes)
     private readonly List<string> candidates = new();
 
+    public bool SkipImport { get; set; }
+
     public OnboardingDialog()
     {
         Text = "Bienvenue — Team Launcher";
@@ -88,7 +90,7 @@ public class OnboardingDialog : Form
 
     private void BuildWelcome()
     {
-        stepPanel.Controls.Add(MkTitle("Bienvenue dans ton nouveau launcher !"));
+        stepPanel.Controls.Add(MkTitle(Lang.T("Bienvenue dans ton nouveau launcher !", "Welcome to your new launcher!")));
         stepPanel.Controls.Add(MkText(
             "Léger, rapide et sans pub : tes instances, tes mods, tes serveurs.\n\n" +
             "En 2 minutes :\n" +
@@ -132,6 +134,13 @@ public class OnboardingDialog : Form
                 DataStore.Settings.PlayerName = session.Name;
                 DataStore.Save();
                 AppEvents.NotifyAccountChanged();
+                if (SkipImport)
+                {
+                    DataStore.Settings.OnboardingDone = true;
+                    DataStore.Save();
+                    DialogResult = DialogResult.OK;
+                    return;
+                }
                 step++; ShowStep();
             }
             else
@@ -173,6 +182,13 @@ public class OnboardingDialog : Form
             DataStore.Settings.PlayerName = name;
             DataStore.Save();
             AppEvents.NotifyAccountChanged();
+            if (SkipImport)
+            {
+                DataStore.Settings.OnboardingDone = true;
+                DataStore.Save();
+                DialogResult = DialogResult.OK;
+                return;
+            }
             step++; ShowStep();
         };
 

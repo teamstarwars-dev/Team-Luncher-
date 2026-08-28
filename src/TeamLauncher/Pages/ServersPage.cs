@@ -109,9 +109,41 @@ public class ServersPage : UserControl, IRefreshable
             Font = new Font("Segoe UI", 9f)
         };
 
+        var templateCombo = new ComboBox
+        {
+            Location = new Point(540, 8), Size = new Size(130, 32),
+            DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 9f),
+            BackColor = Theme.Card, ForeColor = Theme.Text
+        };
+        templateCombo.Items.AddRange(new object[] {
+            "Aucun template",
+            "🏠 Survival",
+            "🎨 Creative",
+            "🏝 SkyBlock",
+            "🏘 Ville RP",
+            "⚔️ PvP",
+            "🎯 Minigames"
+        });
+        templateCombo.SelectedIndex = 0;
+        templateCombo.SelectedIndexChanged += (_, _) =>
+        {
+            // Ajuster les options selon le template sélectionné
+            string template = templateCombo.SelectedItem?.ToString() ?? "";
+            if (template.Contains("Creative"))
+            {
+                rpChk.Checked = false;
+            }
+            else if (template.Contains("RP"))
+            {
+                rpChk.Checked = true;
+            }
+        };
+
         var createBtn = MkBtn(Lang.T("+ Créer le serveur", "+ Create server"), primary: true, x: 680, w: 210);
         createBtn.Click += async (_, _) => await CreateServerAsync(
-            loaderCombo.SelectedItem as string ?? "Vanilla", rpChk.Checked);
+            loaderCombo.SelectedItem as string ?? "Vanilla", rpChk.Checked,
+            templateCombo.SelectedItem?.ToString() ?? "Aucun template");
 
         createStatus.SetBounds(900, 14, 160, 26);
         createStatus.ForeColor = Theme.TextDim;
@@ -122,6 +154,7 @@ public class ServersPage : UserControl, IRefreshable
         createRow.Controls.Add(hostNameBox);
         createRow.Controls.Add(hostVersionCombo);
         createRow.Controls.Add(loaderCombo);
+        createRow.Controls.Add(templateCombo);
         createRow.Controls.Add(rpChk);
         createRow.Controls.Add(createBtn);
         createRow.Controls.Add(createStatus);
@@ -153,13 +186,12 @@ public class ServersPage : UserControl, IRefreshable
             ForeColor = Theme.TextDim, AutoSize = true
         });
 
-        serverList.Dock = DockStyle.Fill;
         serverList.FlowDirection = FlowDirection.TopDown;
         serverList.WrapContents = false;
         serverList.AutoScroll = true;
-        serverList.Height = 380;
+        serverList.Width = 940;
         serverList.BackColor = Theme.Bg;
-        serverList.Margin = new Padding(0, 8, 0, 0);        // ---- boutons façon menu MC ----
+        serverList.Margin = new Padding(0, 8, 0, 0);
         var btnRow = new Panel { Height = 52, Width = 920, Margin = new Padding(0, 10, 0, 0) };
         addressBox.SetBounds(0, 8, 360, 32);
         addressBox.Font = new Font("Consolas", 10f);
@@ -212,11 +244,10 @@ public class ServersPage : UserControl, IRefreshable
             ForeColor = Theme.TextDim, AutoSize = true
         });
 
-        cityList.Dock = DockStyle.Fill;
         cityList.FlowDirection = FlowDirection.TopDown;
         cityList.WrapContents = false;
         cityList.AutoScroll = true;
-        cityList.Height = 380;
+        cityList.Width = 940;
         cityList.BackColor = Theme.Bg;
         cityList.Margin = new Padding(0, 8, 0, 0);
 
@@ -312,13 +343,13 @@ public class ServersPage : UserControl, IRefreshable
         }
         catch
         {
-            createStatus.Text = "Impossible de charger la liste des versions.";
+            createStatus.Text = Lang.T("Impossible de charger la liste des versions.", "Cannot load version list.");
         }
     }
 
     // ---------------- création & cartes hébergées ----------------
 
-    private async Task CreateServerAsync(string loader, bool rpProfile)
+    private async Task CreateServerAsync(string loader, bool rpProfile, string template = "Aucun template")
     {
         string name = hostNameBox.Text.Trim();
         if (name.Length == 0)
@@ -344,6 +375,10 @@ public class ServersPage : UserControl, IRefreshable
             Name = name, McVersion = version, Loader = loader, Port = port, Motd = name,
             RpProfile = rpProfile
         };
+
+        // Appliquer les paramètres du template
+        ApplyTemplate(hs, template);
+
         DataStore.Settings.HostedServers.Add(hs);
         DataStore.Save();
         hostNameBox.Text = "";
@@ -377,6 +412,34 @@ public class ServersPage : UserControl, IRefreshable
             MessageBox.Show(
                 Lang.T("Échec du téléchargement du serveur :\n", "Server download failed:\n") + ex.Message,
                 "Team Launcher");
+        }
+    }
+
+    private static void ApplyTemplate(HostedServer s, string template)
+    {
+        switch (template)
+        {
+            case "🏠 Survival":
+                s.Motd = "§a" + s.Name + " §7— Survival";
+                break;
+            case "🎨 Creative":
+                s.Motd = "§b" + s.Name + " §7— Creative";
+                s.RpProfile = false;
+                break;
+            case "🏝 SkyBlock":
+                s.Motd = "§e" + s.Name + " §7— SkyBlock";
+                break;
+            case "🏘 Ville RP":
+                s.Motd = "§6" + s.Name + " §7— Ville RP";
+                s.RpProfile = true;
+                s.WhitelistEnabled = true;
+                break;
+            case "⚔️ PvP":
+                s.Motd = "§c" + s.Name + " §7— PvP";
+                break;
+            case "🎯 Minigames":
+                s.Motd = "§d" + s.Name + " §7— Minigames";
+                break;
         }
     }
 
@@ -429,6 +492,54 @@ public class ServersPage : UserControl, IRefreshable
         };
         _statusLabels[s.Id] = status;
         card.Disposed += (_, _) => { if (_statusLabels.TryGetValue(s.Id, out var l) && ReferenceEquals(l, status)) _statusLabels.Remove(s.Id); };
+
+        // ---- Monitoring CPU/RAM en temps réel ----
+        var monitorLabel = new Label
+        {
+            Text = "",
+            ForeColor = Theme.Accent,
+            Font = new Font("Consolas", 8.5f),
+            Location = new Point(64, 72), AutoSize = true
+        };
+        if (running)
+        {
+            var monitorTimer = new System.Windows.Forms.Timer { Interval = 5000 };
+            void UpdateMonitor(object? _, EventArgs __)
+            {
+                if (!ServerHost.IsRunning(s) || card.IsDisposed)
+                {
+                    monitorTimer.Stop();
+                    monitorTimer.Dispose();
+                    monitorLabel.Text = "";
+                    return;
+                }
+                try
+                {
+                    var process = System.Diagnostics.Process.GetProcessById(
+                        System.Diagnostics.Process.GetProcessesByName("java")
+                            .FirstOrDefault(p =>
+                            {
+                                try { return p.MainModule?.FileName?.Contains("javaw") == true; }
+                                catch { return false; }
+                            })?.Id ?? 0);
+                    if (process != null)
+                    {
+                        long ramMb = process.WorkingSet64 / 1024 / 1024;
+                        double cpu = process.TotalProcessorTime.TotalMilliseconds / (DateTime.Now - process.StartTime).TotalMilliseconds * 100;
+                        monitorLabel.Text = $"📊 RAM: {ramMb} Mo  •  CPU: {cpu:F1}%";
+                    }
+                }
+                catch { monitorLabel.Text = ""; }
+            }
+            monitorTimer.Tick += UpdateMonitor;
+            monitorTimer.Start();
+            card.Disposed += (_, _) => { monitorTimer.Stop(); monitorTimer.Dispose(); };
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                if (!card.IsDisposed) card.BeginInvoke(() => UpdateMonitor(null!, EventArgs.Empty));
+            });
+        }
 
         var copyQuickBtn = MkBtn("⧉", primary: false, x: 0, w: 44);
         copyQuickBtn.Location = new Point(card.Width - 142, 10);
@@ -604,7 +715,7 @@ public class ServersPage : UserControl, IRefreshable
             ServerHost.SendCommand(s.Id, c);
             cmdBox.Text = "";
         }
-        var sendBtn = new Button { Text = "Envoyer", Width = 84, Height = 32 };
+        var sendBtn = new Button {             Text = Lang.T("Envoyer", "Send"), Width = 84, Height = 32 };
         Theme.Apply(sendBtn, primary: true);
         sendBtn.Click += (_, _) => SendCmd(cmdBox.Text);
         cmdBox.KeyPress += (_, e) =>
@@ -693,18 +804,33 @@ public class ServersPage : UserControl, IRefreshable
         modsBtn.Height = 42;
         modsBtn.Click += (_, _) => ShowModsDialog(s);
 
+        var modpackBtn = MkBtn("📦 Installer un modpack", primary: false, x: 406, w: 200);
+        modpackBtn.Location = new Point(406, 18);
+        modpackBtn.Height = 42;
+        modpackBtn.ForeColor = Theme.Accent;
+        modpackBtn.Click += async (_, _) => await InstallModpackOnServerAsync(s);
+
+        var worldLibBtn = MkBtn("📚 Bibliothèque de mondes", primary: false, x: 616, w: 200);
+        worldLibBtn.Location = new Point(616, 18);
+        worldLibBtn.Height = 42;
+        worldLibBtn.Click += (_, _) => ShowWorldLibrary(s);
+
         var contentHint = new Label
         {
             Text = Lang.T(
                 "L'import remplace le monde actuel (l'ancien est sauvegardé dans le dossier du serveur).\n" +
-                "Les mods (.jar) s'activent au prochain démarrage — nécessite Fabric, Forge ou NeoForge.",
+                "Les mods (.jar) s'activent au prochain démarrage — nécessite Fabric, Forge ou NeoForge.\n" +
+                "Un modpack CurseForge/Modrinch peut être installé directement sur le serveur.\n" +
+                "La bibliothèque de mondes permet de sauvegarder/charger des mondes entre serveurs.",
                 "Importing replaces the current world (the old one is backed up in the server folder).\n" +
-                "Mods (.jar) are loaded on next start — requires Fabric, Forge or NeoForge."),
+                "Mods (.jar) are loaded on next start — requires Fabric, Forge or NeoForge.\n" +
+                "A CurseForge/Modrinth modpack can be installed directly on the server.\n" +
+                "The world library lets you save/load worlds between servers."),
             ForeColor = Theme.TextDim, Font = new Font("Segoe UI", 9f),
             Location = new Point(16, 72), AutoSize = true
         };
 
-        contentPage.Controls.AddRange(new Control[] { mapBtn, modsBtn, contentHint });
+        contentPage.Controls.AddRange(new Control[] { mapBtn, modsBtn, modpackBtn, worldLibBtn, contentHint });
 
         // ---------------- onglet Réglages ----------------
 
@@ -755,7 +881,7 @@ public class ServersPage : UserControl, IRefreshable
 
         card.Controls.AddRange(new Control[]
         {
-            icon, nameLbl, info, status, copyQuickBtn, folderBtn, delBtn, tabs
+            icon, nameLbl, info, status, monitorLabel, copyQuickBtn, folderBtn, delBtn, tabs
         });
         return card;
     }
@@ -782,13 +908,13 @@ public class ServersPage : UserControl, IRefreshable
         Theme.Blockify(top);
         var autoChk = new CheckBox
         {
-            Text = "Relancer automatiquement si le serveur s'arrête anormalement (crash)",
+            Text = Lang.T("Relancer automatiquement si le serveur s'arrête anormalement (crash)", "Auto-restart if server stops abnormally (crash)"),
             ForeColor = Theme.Text, AutoSize = true,
             Checked = s.AutoRestart
         };
         var restartLbl = new Label
         {
-            Text = "Redémarrage quotidien à (HH:mm, vide = aucun) :",
+            Text = Lang.T("Redémarrage quotidien à (HH:mm, vide = aucun) :", "Daily restart at (HH:mm, empty = none):"),
             ForeColor = Theme.TextDim, AutoSize = true, Location = new Point(4, 34)
         };
         var restartBox = new TextBox
@@ -816,11 +942,55 @@ public class ServersPage : UserControl, IRefreshable
             }
             catch (Exception ex) { MessageBox.Show(ex.Message, "Team Launcher"); }
         };
+
+        // ---- Discord Webhook ----
+        var webhookLabel = new Label
+        {
+            Text = Lang.T("Webhook Discord (notifications joueurs) :", "Discord Webhook (player notifications):"),
+            ForeColor = Theme.TextDim, AutoSize = true,
+            Location = new Point(4, 100)
+        };
+        var webhookBox = new TextBox
+        {
+            Text = s.DiscordWebhookUrl, Width = 400,
+            Location = new Point(250, 96),
+            Font = new Font("Consolas", 9f),
+            PlaceholderText = "https://discord.com/api/webhooks/..."
+        };
+        var webhookTestBtn = new Button { Text = "Tester", Width = 80, Height = 28 };
+        Theme.Apply(webhookTestBtn);
+        webhookTestBtn.Location = new Point(660, 96);
+        webhookTestBtn.Click += async (_, _) =>
+        {
+            string url = webhookBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                MessageBox.Show("Entre une URL de webhook Discord.", "Team Launcher");
+                return;
+            }
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                var payload = new { content = $"✅ **Team Launcher** — Test de webhook pour **{s.Name}** !" };
+                var json = System.Text.Json.JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                await http.PostAsync(url, content);
+                MessageBox.Show("Message de test envoyé ! Vérifie ton canal Discord.", "Team Launcher");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher");
+            }
+        };
+
         top.Controls.Add(autoChk);
         top.Controls.Add(restartLbl);
         top.Controls.Add(restartBox);
         top.Controls.Add(backupsBtn);
         top.Controls.Add(backupNowBtn);
+        top.Controls.Add(webhookLabel);
+        top.Controls.Add(webhookBox);
+        top.Controls.Add(webhookTestBtn);
 
         var box = new TextBox
         {
@@ -839,6 +1009,7 @@ public class ServersPage : UserControl, IRefreshable
                 File.WriteAllText(path, box.Text);
                 s.AutoRestart = autoChk.Checked;
                 s.RestartAt = restartBox.Text.Trim();
+                s.DiscordWebhookUrl = webhookBox.Text.Trim();
                 DataStore.Save();
                 dlg.Close();
                 Notifier.Show(s.Name, "Configuration enregistrée.");
@@ -923,6 +1094,416 @@ public class ServersPage : UserControl, IRefreshable
         buttons.Controls.Add(del);
         buttons.Controls.Add(note);
         dlg.Controls.Add(list);
+        dlg.Controls.Add(buttons);
+        dlg.Show(FindForm());
+    }
+
+    /// <summary>Installe un modpack CurseForge/Modrinth sur le serveur.</summary>
+    private async Task InstallModpackOnServerAsync(HostedServer s)
+    {
+        if (s.Loader == "Vanilla")
+        {
+            MessageBox.Show(
+                Lang.T(
+                    "Les mods ne fonctionnent que sur un serveur moddé.\n" +
+                    "Choisis Fabric, Forge ou NeoForge à la création du serveur.",
+                    "Mods only work on a modded server.\n" +
+                    "Choose Fabric, Forge or NeoForge when creating the server."),
+                "Team Launcher");
+            return;
+        }
+
+        var dlg = new Form
+        {
+            Text = Lang.T($"Installer un modpack — {s.Name}", $"Install a modpack — {s.Name}"),
+            Size = new Size(600, 400), StartPosition = FormStartPosition.CenterParent,
+            BackColor = Theme.Bg
+        };
+
+        var searchBox = new TextBox
+        {
+            Width = 350, Font = new Font("Segoe UI", 10f),
+            Location = new Point(16, 16),
+            PlaceholderText = Lang.T("Rechercher un modpack sur Modrinth...", "Search for a modpack on Modrinth...")
+        };
+
+        var searchBtn = new Button
+        {
+            Text = Lang.T("Rechercher", "Search"), Width = 100, Height = 32,
+            Location = new Point(376, 16)
+        };
+        Theme.Apply(searchBtn, primary: true);
+
+        var resultsList = new ListBox
+        {
+            Location = new Point(16, 56), Size = new Size(550, 240),
+            BackColor = Theme.Card, ForeColor = Theme.Text,
+            Font = new Font("Segoe UI", 9.5f)
+        };
+
+        var installBtn = new Button
+        {
+            Text = Lang.T("📦 Installer ce modpack", "📦 Install this modpack"),
+            Width = 200, Height = 38,
+            Location = new Point(16, 310),
+            Enabled = false
+        };
+        Theme.Apply(installBtn, primary: true);
+
+        var statusLabel = new Label
+        {
+            Location = new Point(230, 316), AutoSize = true,
+            ForeColor = Theme.TextDim, Font = new Font("Segoe UI", 9f)
+        };
+
+        searchBtn.Click += async (_, _) =>
+        {
+            string query = searchBox.Text.Trim();
+            if (query.Length < 2) return;
+
+            statusLabel.Text = Lang.T("Recherche en cours...", "Searching...");
+            resultsList.Items.Clear();
+            installBtn.Enabled = false;
+
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                var response = await http.GetStringAsync(
+                    $"https://api.modrinth.com/v2/search?query={Uri.EscapeDataString(query)}&facets=%5B%5B%22project_type%3Amodpack%22%5D%5D&limit=10");
+                var json = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(response);
+                var hits = json.GetProperty("hits");
+
+                foreach (var hit in hits.EnumerateArray())
+                {
+                    string title = hit.GetProperty("title").GetString() ?? "";
+                    string slug = hit.GetProperty("slug").GetString() ?? "";
+                    string desc = hit.GetProperty("description").GetString() ?? "";
+                    int downloads = hit.GetProperty("downloads").GetInt32();
+                    var item = new ModpackListItem
+                    {
+                        Slug = slug,
+                        Display = $"{title} ({slug}) — {downloads:N0} dl — {desc[..Math.Min(60, desc.Length)]}..."
+                    };
+                    resultsList.Items.Add(item);
+                }
+
+                statusLabel.Text = resultsList.Items.Count > 0
+                    ? Lang.T($"{resultsList.Items.Count} résultat(s)", $"{resultsList.Items.Count} result(s)")
+                    : Lang.T("Aucun résultat", "No results");
+            }
+            catch (Exception ex)
+            {
+                statusLabel.Text = Lang.T("Erreur : " + ex.Message, "Error: " + ex.Message);
+            }
+        };
+
+        searchBox.KeyPress += (_, e) =>
+        {
+            if (e.KeyChar == (char)13) { searchBtn.PerformClick(); e.Handled = true; }
+        };
+
+        resultsList.SelectedIndexChanged += (_, _) =>
+        {
+            installBtn.Enabled = resultsList.SelectedIndex >= 0;
+        };
+
+        installBtn.Click += async (_, _) =>
+        {
+            if (resultsList.SelectedItem is not ModpackListItem selected) return;
+            string slug = selected.Slug;
+            installBtn.Enabled = false;
+            statusLabel.Text = Lang.T("Installation en cours...", "Installing...");
+
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+
+                // Get modpack versions
+                var versionsResponse = await http.GetStringAsync(
+                    $"https://api.modrinth.com/v2/project/{slug}/version?loaders=%5B%22{s.Loader.ToLower()}%22%5D&game_versions=%5B%22{s.McVersion}%22%5D");
+                var versions = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(versionsResponse);
+
+                if (versions.GetArrayLength() == 0)
+                {
+                    statusLabel.Text = Lang.T("Aucune version compatible", "No compatible version");
+                    installBtn.Enabled = true;
+                    return;
+                }
+
+                var firstVersion = versions[0];
+                var files = firstVersion.GetProperty("files");
+                if (files.GetArrayLength() == 0)
+                {
+                    statusLabel.Text = Lang.T("Aucun fichier", "No files");
+                    installBtn.Enabled = true;
+                    return;
+                }
+
+                string downloadUrl = files[0].GetProperty("url").GetString()!;
+                string fileName = files[0].GetProperty("filename").GetString() ?? $"{slug}.mrpack";
+
+                // Download the modpack
+                string tempFile = Path.Combine(Path.GetTempPath(), fileName);
+                var bytes = await http.GetByteArrayAsync(downloadUrl);
+                await File.WriteAllBytesAsync(tempFile, bytes);
+
+                // Extract mods from mrpack
+                string modsDir = Path.Combine(ServerHost.Dir(s), "mods");
+                Directory.CreateDirectory(modsDir);
+
+                if (fileName.EndsWith(".mrpack"))
+                {
+                    // Modrinth modpack format
+                    string tempDir = Path.Combine(Path.GetTempPath(), "tl-modpack-" + Guid.NewGuid().ToString("N"));
+                    try
+                    {
+                        System.IO.Compression.ZipFile.ExtractToDirectory(tempFile, tempDir);
+
+                        // Read modrinth.index.json
+                        string indexFile = Path.Combine(tempDir, "modrinth.index.json");
+                        if (File.Exists(indexFile))
+                        {
+                            var index = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
+                                await File.ReadAllTextAsync(indexFile));
+                            var modFiles = index.GetProperty("files");
+
+                            foreach (var modFile in modFiles.EnumerateArray())
+                            {
+                                string modUrl = modFile.GetProperty("url").GetString()!;
+                                string modPath = modFile.GetProperty("path").GetString()!;
+                                string destPath = Path.Combine(ServerHost.Dir(s), "mods", Path.GetFileName(modPath));
+
+                                var modBytes = await http.GetByteArrayAsync(modUrl);
+                                await File.WriteAllBytesAsync(destPath, modBytes);
+                            }
+                        }
+
+                        // Copy overrides
+                        string overrides = Path.Combine(tempDir, "overrides");
+                        if (Directory.Exists(overrides))
+                        {
+                            CopyDirRecursive(overrides, ServerHost.Dir(s));
+                        }
+                    }
+                    finally
+                    {
+                        try { Directory.Delete(tempDir, recursive: true); } catch { }
+                    }
+                }
+                else
+                {
+                    // Regular zip - extract mods
+                    string tempDir = Path.Combine(Path.GetTempPath(), "tl-modpack-" + Guid.NewGuid().ToString("N"));
+                    try
+                    {
+                        System.IO.Compression.ZipFile.ExtractToDirectory(tempFile, tempDir);
+                        string modsSource = Path.Combine(tempDir, "mods");
+                        if (Directory.Exists(modsSource))
+                        {
+                            foreach (var f in Directory.GetFiles(modsSource, "*.jar"))
+                                File.Copy(f, Path.Combine(modsDir, Path.GetFileName(f)), overwrite: true);
+                        }
+                    }
+                    finally
+                    {
+                        try { Directory.Delete(tempDir, recursive: true); } catch { }
+                    }
+                }
+
+                try { File.Delete(tempFile); } catch { }
+
+                statusLabel.Text = Lang.T("Modpack installé !", "Modpack installed!");
+                Notifier.Show(s.Name, Lang.T(
+                    $"Modpack « {slug} » installé ! Redémarre le serveur.",
+                    $"Modpack \"{slug}\" installed! Restart the server."));
+                dlg.Close();
+            }
+            catch (Exception ex)
+            {
+                statusLabel.Text = Lang.T("Erreur : " + ex.Message, "Error: " + ex.Message);
+                installBtn.Enabled = true;
+            }
+        };
+
+        dlg.Controls.Add(searchBox);
+        dlg.Controls.Add(searchBtn);
+        dlg.Controls.Add(resultsList);
+        dlg.Controls.Add(installBtn);
+        dlg.Controls.Add(statusLabel);
+        dlg.Show(FindForm());
+    }
+
+    private static void CopyDirRecursive(string src, string dst)
+    {
+        Directory.CreateDirectory(dst);
+        foreach (var f in Directory.GetFiles(src))
+            File.Copy(f, Path.Combine(dst, Path.GetFileName(f)), overwrite: true);
+        foreach (var d in Directory.GetDirectories(src))
+            CopyDirRecursive(d, Path.Combine(dst, Path.GetFileName(d)));
+    }
+
+    /// <summary>Bibliothèque de mondes : sauvegarder un monde serveur, en charger un existant.</summary>
+    private void ShowWorldLibrary(HostedServer s)
+    {
+        string libraryDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TeamLauncher", "world-library");
+        Directory.CreateDirectory(libraryDir);
+
+        var dlg = new Form
+        {
+            Text = Lang.T($"Bibliothèque de mondes — {s.Name}", $"World Library — {s.Name}"),
+            Size = new Size(600, 440), StartPosition = FormStartPosition.CenterParent,
+            BackColor = Theme.Bg
+        };
+
+        var worldList = new ListBox
+        {
+            Dock = DockStyle.Fill, BackColor = Theme.Card, ForeColor = Theme.Text,
+            Font = new Font("Segoe UI", 9.5f)
+        };
+
+        void RefreshWorldList()
+        {
+            worldList.Items.Clear();
+            foreach (var dir in Directory.GetDirectories(libraryDir))
+            {
+                string name = Path.GetFileName(dir);
+                long size = Directory.GetFiles(dir, "*", SearchOption.AllDirectories)
+                    .Sum(f => new FileInfo(f).Length);
+                var levelDat = Path.Combine(dir, "level.dat");
+                string info = File.Exists(levelDat)
+                    ? $" — {size / 1024.0 / 1024.0:0.#} Mo"
+                    : $" — (pas de level.dat) — {size / 1024.0 / 1024.0:0.#} Mo";
+                worldList.Items.Add(name + info);
+            }
+            if (worldList.Items.Count == 0)
+                worldList.Items.Add("(Aucun monde sauvegardé)");
+        }
+        RefreshWorldList();
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom, Height = 80, FlowDirection = FlowDirection.LeftToRight, WrapContents = true
+        };
+
+        var saveCurrentBtn = new Button
+        {
+            Text = Lang.T("💾 Sauvegarder le monde actuel", "💾 Save current world"),
+            Width = 250, Height = 38
+        };
+        Theme.Apply(saveCurrentBtn, primary: true);
+        saveCurrentBtn.Click += (_, _) =>
+        {
+            string worldDir = Path.Combine(ServerHost.Dir(s), "world");
+            if (!Directory.Exists(worldDir))
+            {
+                MessageBox.Show("Aucun monde sur ce serveur.", "Team Launcher");
+                return;
+            }
+
+            string name = Microsoft.VisualBasic.Interaction.InputBox(
+                "Nom pour cette sauvegardé dans la bibliothèque :",
+                "Sauvegarder le monde",
+                $"{s.Name}-{DateTime.Now:yyyyMMdd}");
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            string dest = Path.Combine(libraryDir, name);
+            if (Directory.Exists(dest))
+            {
+                if (MessageBox.Show($"« {name} » existe déjà. Remplacer ?",
+                    "Team Launcher", MessageBoxButtons.YesNo) != DialogResult.Yes)
+                    return;
+                Directory.Delete(dest, recursive: true);
+            }
+
+            try
+            {
+                CopyDirRecursive(worldDir, dest);
+                Notifier.Show(s.Name, $"Monde « {name} » sauvegardé dans la bibliothèque !");
+                RefreshWorldList();
+            }
+            catch (Exception ex) { MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher"); }
+        };
+
+        var loadSelectedBtn = new Button
+        {
+            Text = Lang.T("📥 Charger ce monde sur le serveur", "📥 Load this world on server"),
+            Width = 260, Height = 38
+        };
+        Theme.Apply(loadSelectedBtn);
+        loadSelectedBtn.Click += (_, _) =>
+        {
+            int idx = worldList.SelectedIndex;
+            if (idx < 0 || idx >= worldList.Items.Count)
+            {
+                MessageBox.Show("Sélectionne un monde dans la liste.", "Team Launcher");
+                return;
+            }
+
+            string selected = worldList.Items[idx].ToString()!;
+            string name = selected.Split(" — ")[0];
+            string srcDir = Path.Combine(libraryDir, name);
+            if (!Directory.Exists(srcDir))
+            {
+                MessageBox.Show("Dossier introuvable.", "Team Launcher");
+                return;
+            }
+
+            if (ServerHost.IsRunning(s))
+            {
+                MessageBox.Show("Arrête le serveur avant de charger un monde.", "Team Launcher");
+                return;
+            }
+
+            if (MessageBox.Show(
+                $"Remplacer le monde actuel du serveur par « {name} » ?\n" +
+                "(L'ancien monde sera sauvegardé dans le dossier du serveur)",
+                "Team Launcher", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            try
+            {
+                string worldDir = Path.Combine(ServerHost.Dir(s), "world");
+                if (Directory.Exists(worldDir))
+                {
+                    string backup = Path.Combine(ServerHost.Dir(s), "world.backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+                    Directory.Move(worldDir, backup);
+                }
+                CopyDirRecursive(srcDir, worldDir);
+                Notifier.Show(s.Name, $"Monde « {name} » chargé ! Redémarre le serveur.");
+                dlg.Close();
+            }
+            catch (Exception ex) { MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher"); }
+        };
+
+        var deleteBtn = new Button
+        {
+            Text = Lang.T("🗑 Supprimer de la bibliothèque", "🗑 Delete from library"),
+            Width = 230, Height = 38
+        };
+        Theme.Apply(deleteBtn);
+        deleteBtn.Click += (_, _) =>
+        {
+            int idx = worldList.SelectedIndex;
+            if (idx < 0 || idx >= worldList.Items.Count) return;
+            string selected = worldList.Items[idx].ToString()!;
+            string name = selected.Split(" — ")[0];
+            if (MessageBox.Show($"Supprimer « {name} » de la bibliothèque ?",
+                "Team Launcher", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+            try
+            {
+                Directory.Delete(Path.Combine(libraryDir, name), recursive: true);
+                RefreshWorldList();
+            }
+            catch (Exception ex) { MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher"); }
+        };
+
+        buttons.Controls.Add(saveCurrentBtn);
+        buttons.Controls.Add(loadSelectedBtn);
+        buttons.Controls.Add(deleteBtn);
+        dlg.Controls.Add(worldList);
         dlg.Controls.Add(buttons);
         dlg.Show(FindForm());
     }
@@ -1240,7 +1821,7 @@ public class ServersPage : UserControl, IRefreshable
         };
         var hint = new Label
         {
-            Text = "Serveur arrêté requis.", ForeColor = Theme.TextDim,
+            Text = Lang.T("Serveur arrêté requis.", "Server stop required."), ForeColor = Theme.TextDim,
             AutoSize = true, Margin = new Padding(12, 10, 0, 0)
         };
         row.Controls.Add(restore);
@@ -1477,7 +2058,7 @@ public class ServersPage : UserControl, IRefreshable
                 if (row.IsDisposed) return;
                 if (st == null)
                 {
-                    status.Text = "✘ Hors ligne";
+                    status.Text = Lang.T("✘ Hors ligne", "✘ Offline");
                     status.ForeColor = Color.IndianRed;
                     return;
                 }
@@ -1556,7 +2137,7 @@ public class ServersPage : UserControl, IRefreshable
                 if (row.IsDisposed) return;
                 if (st == null)
                 {
-                    status.Text = "✘ Hors ligne";
+                    status.Text = Lang.T("✘ Hors ligne", "✘ Offline");
                     status.ForeColor = Color.IndianRed;
                     players.Text = "";
                     return;
@@ -1598,7 +2179,7 @@ public class ServersPage : UserControl, IRefreshable
             if (addr.Length == 0)
             {
                 MessageBox.Show(
-                    "Tape d'abord l'adresse du serveur dans le champ à gauche (ex : mc.hypixel.net).",
+                    Lang.T("Tape d'abord l'adresse du serveur dans le champ à gauche (ex : mc.hypixel.net).", "Enter the server address in the field on the left first (e.g. mc.hypixel.net)."),
                     "Team Launcher");
                 addressBox.Focus();
                 return;
@@ -1611,14 +2192,22 @@ public class ServersPage : UserControl, IRefreshable
         }
         catch (Exception ex)
         {
-            MessageBox.Show("Erreur en ajoutant le serveur :\n" + ex.Message, "Team Launcher");
+            MessageBox.Show(Lang.T("Erreur en ajoutant le serveur :\n", "Error adding server:\n") + ex.Message, "Team Launcher");
         }
     }
 
     private void Join(string address)
     {
-        using var pick = new InstancePickDialog("Rejoindre avec quelle instance ?", "Rejoindre");
+        using var pick = new InstancePickDialog(Lang.T("Rejoindre avec quelle instance ?", "Join with which instance?"), Lang.T("Rejoindre", "Join"));
         if (pick.ShowDialog(FindForm()) != DialogResult.OK || pick.Selected == null) return;
         GameLauncher.Play(pick.Selected, address);
     }
+}
+
+/// <summary>Élément de liste pour les modpacks Modrinth.</summary>
+internal class ModpackListItem
+{
+    public string Slug { get; set; } = "";
+    public string Display { get; set; } = "";
+    public override string ToString() => Display;
 }

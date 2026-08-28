@@ -458,6 +458,11 @@ public class InstanceDetailPage : UserControl, IRefreshable
             };
             actionsRow.Controls.Add(addModBtn);
 
+            var worldEditBtn = MkActionBtn("🔧 Installer WorldEdit");
+            worldEditBtn.ForeColor = Theme.Accent;
+            worldEditBtn.Click += async (_, _) => await InstallWorldEditAsync();
+            actionsRow.Controls.Add(worldEditBtn);
+
             var openModsBtn = MkActionBtn("📂 Ouvrir le dossier mods");
             openModsBtn.Click += (_, _) =>
             {
@@ -497,6 +502,98 @@ public class InstanceDetailPage : UserControl, IRefreshable
         Theme.Apply(b);
         b.Font = new Font("Segoe UI", 8.5f);
         return b;
+    }
+
+    private async Task InstallWorldEditAsync()
+    {
+        string modsDir = Path.Combine(DataStore.InstancesRoot, inst.Id, "mods");
+        Directory.CreateDirectory(modsDir);
+
+        // Vérifier si WorldEdit est déjà installé
+        var existing = Directory.GetFiles(modsDir, "worldedit*.jar");
+        if (existing.Length > 0)
+        {
+            MessageBox.Show(
+                Lang.T("WorldEdit est déjà installé :\n" + Path.GetFileName(existing[0]),
+                    "WorldEdit is already installed:\n" + Path.GetFileName(existing[0])),
+                "Team Launcher");
+            return;
+        }
+
+        string mcVersion = inst.McVersion;
+        string loader = inst.Loader;
+
+        // Déterminer l'URL de téléchargement selon le loader
+        string downloadUrl = loader switch
+        {
+            "Fabric" => $"https://mediafilez.forgecdn.net/files/5781/538/worldedit-mod-7.3.16-{mcVersion}.jar",
+            "Forge" => $"https://mediafilez.forgecdn.net/files/5781/538/worldedit-mod-7.3.16-{mcVersion}.jar",
+            "NeoForge" => $"https://mediafilez.forgecdn.net/files/5781/538/worldedit-mod-7.3.16-{mcVersion}.jar",
+            _ => $"https://mediafilez.forgecdn.net/files/5781/538/worldedit-mod-7.3.16-{mcVersion}.jar"
+        };
+
+        // Utiliser Modrinth API pour trouver la bonne version
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+
+            // Chercher sur Modrinth
+            string projectUrl = $"https://api.modrinth.com/v2/project/worldedit/version?game_versions=%5B%22{mcVersion}%22%5D&loaders=%5B%22{loader.ToLower()}%22%5D";
+            var response = await http.GetStringAsync(projectUrl);
+            var versions = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(response);
+
+            if (versions.GetArrayLength() > 0)
+            {
+                var first = versions[0];
+                var files = first.GetProperty("files");
+                if (files.GetArrayLength() > 0)
+                {
+                    downloadUrl = files[0].GetProperty("url").GetString()!;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback sur CurseForge
+        }
+
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            var bytes = await http.GetByteArrayAsync(downloadUrl);
+            string fileName = $"worldedit-{mcVersion}-{loader}.jar";
+            await File.WriteAllBytesAsync(Path.Combine(modsDir, fileName), bytes);
+
+            MessageBox.Show(
+                Lang.T(
+                    $"WorldEdit installé !\n\n" +
+                    $"Fichier : {fileName}\n" +
+                    $"Lance Minecraft avec cette instance pour utiliser les commandes WorldEdit :\n" +
+                    $"  //wand — obtenir la baguette magique\n" +
+                    $"  //pos1, //pos2 — définir une sélection\n" +
+                    $"  //set stone — remplir la sélection\n" +
+                    $"  //copy, //paste — copier/coller\n" +
+                    $"  //undo — annuler\n\n" +
+                    $"Documentation : worldedit.enginehub.org",
+                    $"WorldEdit installed!\n\n" +
+                    $"File: {fileName}\n" +
+                    $"Launch Minecraft with this instance to use WorldEdit commands:\n" +
+                    $"  //wand — get the magic wand\n" +
+                    $"  //pos1, //pos2 — set a selection\n" +
+                    $"  //set stone — fill the selection\n" +
+                    $"  //copy, //paste — copy/paste\n" +
+                    $"  //undo — undo\n\n" +
+                    $"Documentation: worldedit.enginehub.org"),
+                "Team Launcher");
+            RefreshData();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                Lang.T("Erreur lors de l'installation de WorldEdit :\n" + ex.Message,
+                    "Error installing WorldEdit:\n" + ex.Message),
+                "Team Launcher");
+        }
     }
 
     private void OpenSelectedItem(object? sender, EventArgs e)

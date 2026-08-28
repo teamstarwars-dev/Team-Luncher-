@@ -32,6 +32,6 @@ public class InstancePickDialog : Form
         Controls.Add(go);
 
         if (picker.Items.Count == 0)
-            MessageBox.Show("Aucune instance disponible.", "Team Launcher");
+            MessageBox.Show(Lang.T("Aucune instance disponible.", "No instance available."), "Team Launcher");
     }
 }

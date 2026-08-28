@@ -24,7 +24,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var title = new Label
         {
-            Text = "Instances",
+            Text = Lang.T("Instances", "Instances"),
             ForeColor = Theme.Text,
             Font = Theme.Title,
             AutoSize = true,
@@ -33,7 +33,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var hint = new Label
         {
-            Text = "Crée, importe, modifie ou supprime tes instances. Double-clique pour jouer.",
+            Text = Lang.T("Crée, importe, modifie ou supprime tes instances. Double-clique pour jouer.", "Create, import, edit or delete your instances. Double-click to play."),
             ForeColor = Theme.TextDim,
             Font = new Font("Segoe UI", 9.5f),
             AutoSize = true,
@@ -50,7 +50,7 @@ public class InstancesPage : UserControl, IRefreshable
                 RefreshData();
         };
 
-        var moreBtn = new Button { Text = "Plus d'actions  ▾", Width = 150, Height = 32, Margin = new Padding(8, 0, 0, 0) };
+        var moreBtn = new Button { Text = Lang.T("Plus d'actions  ▾", "More actions  ▾"), Width = 150, Height = 32, Margin = new Padding(8, 0, 0, 0) };
         Theme.Apply(moreBtn);
         moreBtn.Location = new Point(178, 64);
         moreBtn.Click += (_, _) => BuildActionsMenu(moreBtn).Show(moreBtn, new Point(0, moreBtn.Height));
@@ -60,7 +60,7 @@ public class InstancesPage : UserControl, IRefreshable
             Width = 260,
             Height = 30,
             Font = new Font("Segoe UI", 10f),
-            PlaceholderText = "Rechercher…",
+            PlaceholderText = Lang.T("Rechercher…", "Search…"),
             Location = new Point(0, 110)
         };
         filterBox.TextChanged += (_, _) => RefreshData();
@@ -165,7 +165,7 @@ public class InstancesPage : UserControl, IRefreshable
     {
         using var input = new Form
         {
-            Text = "Installer un modpack CurseForge",
+            Text = Lang.T("Installer un modpack CurseForge", "Install a CurseForge modpack"),
             Size = new Size(500, 200),
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterParent,
@@ -175,7 +175,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var lbl = new Label
         {
-            Text = "Colle le lien ou le code CurseForge :",
+            Text = Lang.T("Colle le lien ou le code CurseForge :", "Paste the CurseForge link or code:"),
             ForeColor = Theme.Text,
             Font = new Font("Segoe UI", 9.5f),
             Location = new Point(16, 14),
@@ -184,7 +184,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var hint = new Label
         {
-            Text = "URL, ID projet, ou slug (ex: rlcraft, all-the-mods-9)",
+            Text = Lang.T("URL, ID projet, ou slug (ex: rlcraft, all-the-mods-9)", "URL, project ID, or slug (e.g. rlcraft, all-the-mods-9)"),
             ForeColor = Theme.TextDim,
             Font = new Font("Segoe UI", 8f),
             Location = new Point(16, 36),
@@ -203,7 +203,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var dlBtn = new Button
         {
-            Text = "Installer",
+            Text = Lang.T("Installer", "Install"),
             Height = 36,
             Width = 120,
             Location = new Point(16, 100)
@@ -243,7 +243,7 @@ public class InstancesPage : UserControl, IRefreshable
             }
 
             dlBtn.Enabled = false;
-            dlBtn.Text = "Recherche…";
+            dlBtn.Text = Lang.T("Recherche…", "Searching…");
             urlBox.Enabled = false;
 
             try
@@ -261,7 +261,7 @@ public class InstancesPage : UserControl, IRefreshable
                 }
 
                 // 2. Télécharger le zip
-                dlBtn.Text = "Téléchargement…";
+                dlBtn.Text = Lang.T("Téléchargement…", "Downloading…");
                 string tmpZip = Path.Combine(Path.GetTempPath(), $"cf_{projectId}_{packFile.FileId}.zip");
                 using (var http = new HttpClient())
                 {
@@ -270,7 +270,7 @@ public class InstancesPage : UserControl, IRefreshable
                 }
 
                 // 3. Importer via CfPackImporter
-                dlBtn.Text = "Installation…";
+                dlBtn.Text = Lang.T("Installation…", "Installing…");
                 var inst = await CfPackImporter.ImportAsync(tmpZip,
                     step => BeginInvoke(() => dlBtn.Text = step.Length > 30 ? step[..30] + "…" : step));
 
@@ -289,7 +289,7 @@ public class InstancesPage : UserControl, IRefreshable
             finally
             {
                 dlBtn.Enabled = true;
-                dlBtn.Text = "Installer";
+                dlBtn.Text = Lang.T("Installer", "Install");
                 urlBox.Enabled = true;
             }
         };
@@ -385,7 +385,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var lbl = new Label
         {
-            Text = "Comment veux-tu partager cette instance ?",
+            Text = Lang.T("Comment veux-tu partager cette instance ?", "How do you want to share this instance?"),
             ForeColor = Theme.Text,
             Font = new Font("Segoe UI", 10f),
             Location = new Point(16, 16),
@@ -450,9 +450,9 @@ public class InstancesPage : UserControl, IRefreshable
                 string json = PackShareService.Serialize(pack);
                 string code = GenerateShareCode(pack);
 
-                using var resultDlg = new Form
+                using                 var resultDlg = new Form
                 {
-                    Text = "Code de partage",
+                    Text = Lang.T("Code de partage", "Share code"),
                     Size = new Size(520, 300),
                     FormBorderStyle = FormBorderStyle.FixedDialog,
                     StartPosition = FormStartPosition.CenterParent,
@@ -471,7 +471,7 @@ public class InstancesPage : UserControl, IRefreshable
 
                 var codeLbl = new Label
                 {
-                    Text = "Code de partage :",
+                    Text = Lang.T("Code de partage :", "Share code:"),
                     ForeColor = Theme.TextDim,
                     Font = new Font("Segoe UI", 8.5f),
                     Location = new Point(16, 40),
@@ -606,7 +606,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         using var dlg = new Form
         {
-            Text = "Importer depuis CurseForge",
+            Text = Lang.T("Importer depuis CurseForge", "Import from CurseForge"),
             Size = new Size(440, 380),
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterParent,
@@ -623,7 +623,7 @@ public class InstancesPage : UserControl, IRefreshable
         };
         foreach (var (_, name) in found) checkList.Items.Add(name, true);
 
-        var importBtn = new Button { Text = "Importer la sélection", Height = 44, Dock = DockStyle.Bottom };
+        var importBtn = new Button { Text = Lang.T("Importer la sélection", "Import selection"), Height = 44, Dock = DockStyle.Bottom };
         Theme.Apply(importBtn, primary: true);
         var infoLabel = new Label
         {
@@ -1069,7 +1069,7 @@ public class CreateInstanceDialog : Form
 
     public CreateInstanceDialog()
     {
-        Text = "Créer une instance";
+        Text = Lang.T("Créer une instance", "Create instance");
         Size = new Size(480, 520);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -1079,7 +1079,7 @@ public class CreateInstanceDialog : Form
         loaderBox.Items.AddRange(new object[] { "Vanilla", "Forge", "Fabric", "NeoForge", "Quilt" });
         loaderBox.SelectedIndex = 0;
 
-        var imgBtn = new Button { Text = "Choisir une image...", Height = 34, Dock = DockStyle.Top };
+        var imgBtn = new Button { Text = Lang.T("Choisir une image...", "Choose an image..."), Height = 34, Dock = DockStyle.Top };
         Theme.Apply(imgBtn);
         imgBtn.Click += (_, _) =>
         {
@@ -1088,7 +1088,7 @@ public class CreateInstanceDialog : Form
                 imagePath = ofd.FileName;
         };
 
-        var ok = new Button { Text = "Créer l'instance", Height = 44, Dock = DockStyle.Bottom };
+        var ok = new Button { Text = Lang.T("Créer l'instance", "Create instance"), Height = 44, Dock = DockStyle.Bottom };
         Theme.Apply(ok, primary: true);
         ok.Click += (_, _) => Create();
 

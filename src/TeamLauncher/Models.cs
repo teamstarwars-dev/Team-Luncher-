@@ -34,6 +34,7 @@ public class HostedServer
     public bool WhitelistEnabled { get; set; } = false;
     public List<string> Whitelist { get; set; } = new();
     public string WelcomeMessage { get; set; } = ""; // envoyé quand un joueur rejoint ({joueur} = pseudo)
+    public string DiscordWebhookUrl { get; set; } = ""; // webhook Discord pour les notifications
 }
 
 /// <summary>Ville RP d'un membre de la team : serveur favori avec identité.</summary>

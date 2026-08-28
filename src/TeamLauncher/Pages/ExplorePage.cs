@@ -33,13 +33,13 @@ public class ExplorePage : UserControl, IRefreshable
 
         root.Controls.Add(new Label
         {
-            Text = "Exploration", ForeColor = Theme.Text,
+            Text = Lang.T("Exploration", "Browse"), ForeColor = Theme.Text,
             Font = Theme.Title,
             AutoSize = true
         });
         root.Controls.Add(new Label
         {
-            Text = "Mods, modpacks et shaders de Modrinth ET CurseForge — Forge, Fabric, NeoForge, Quilt...",
+            Text = Lang.T("Mods, modpacks et shaders de Modrinth ET CurseForge — Forge, Fabric, NeoForge, Quilt...", "Mods, modpacks and shaders from Modrinth AND CurseForge — Forge, Fabric, NeoForge, Quilt..."),
             ForeColor = Theme.TextDim, AutoSize = true
         });
 
@@ -54,7 +54,7 @@ public class ExplorePage : UserControl, IRefreshable
         typeBox.SetBounds(510, 4, 140, 30);
         typeBox.Items.AddRange(new object[] { "Modpacks", "Mods", "Shaders" });
         typeBox.SelectedIndex = 0;
-        var go = new Button { Text = "Rechercher", Size = new Size(130, 32), Location = new Point(660, 2) };
+        var go = new Button { Text = Lang.T("Rechercher", "Search"), Size = new Size(130, 32), Location = new Point(660, 2) };
         Theme.Apply(go, primary: true);
         go.Click += async (_, _) => await SearchAsync();
         bar.Controls.AddRange(new Control[] { searchBox, sourceBox, typeBox, go });
@@ -296,7 +296,7 @@ public class ExplorePage : UserControl, IRefreshable
 
         string category = typeBox.SelectedItem?.ToString() ?? "Mods";
         btn.Enabled = false;
-        btn.Text = "Téléchargement...";
+        btn.Text = Lang.T("Téléchargement...", "Downloading...");
 
         if (h.Source == "modrinth")
             await InstallModrinthAsync(h.Key, inst, category);

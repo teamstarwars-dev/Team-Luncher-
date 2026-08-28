@@ -38,7 +38,7 @@ public static class GameInstaller
         bool fast = File.Exists(markerPath);
 
         // ---- 1. JSON de la version ----
-        progress(fast ? "Lecture du cache" : "Recherche de la version", 0, 1);
+        progress(fast ? Lang.T("Lecture du cache", "Reading cache") : Lang.T("Recherche de la version", "Searching for version"), 0, 1);
         var json = await GetVersionJsonAsync(versionId, ct);
         string vDir = Path.Combine(VersionsDir, versionId);
         Directory.CreateDirectory(vDir);
@@ -47,7 +47,7 @@ public static class GameInstaller
         // ---- 2. Client jar ----
         if (!fast)
         {
-            progress("Téléchargement du jeu", 0, 1);
+            progress(Lang.T("Téléchargement du jeu", "Downloading game"), 0, 1);
             if (json.RootElement.TryGetProperty("downloads", out var downloads)
                 && downloads.TryGetProperty("client", out var client))
             {
@@ -105,7 +105,7 @@ public static class GameInstaller
                 finally
                 {
                     Interlocked.Increment(ref done);
-                    progress("Bibliothèques", Volatile.Read(ref done), libs.Count);
+                    progress(Lang.T("Bibliothèques", "Libraries"), Volatile.Read(ref done), libs.Count);
                     gate.Release();
                 }
             });
@@ -155,7 +155,7 @@ public static class GameInstaller
                 finally
                 {
                     Interlocked.Increment(ref done);
-                    progress("Assets du jeu", Volatile.Read(ref done), objects.Count);
+                    progress(Lang.T("Assets du jeu", "Game assets"), Volatile.Read(ref done), objects.Count);
                 }
             }
 
@@ -172,7 +172,7 @@ public static class GameInstaller
             {
                 assetsHadFailures = true;
                 // nouvelle passe pour rattraper les ratés du parallélisme
-                progress("Seconde passe assets...", 0, objects.Count);
+                progress(Lang.T("Seconde passe assets...", "Second assets pass..."), 0, objects.Count);
                 foreach (var o in objects)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -201,7 +201,7 @@ public static class GameInstaller
         // ---- 5. NeoForge : installeur officiel depuis le Maven NeoForged ----
         if (loader.Equals("NeoForge", StringComparison.OrdinalIgnoreCase))
         {
-            progress("Installation de NeoForge", 0, 0);
+            progress(Lang.T("Installation de NeoForge", "Installing NeoForge"), 0, 0);
             string neoId = await EnsureNeoForgeInstalledAsync(versionId, ct);
 
             string neoJsonPath = Path.Combine(VersionsDir, neoId, neoId + ".json");
@@ -253,7 +253,7 @@ public static class GameInstaller
         // ---- 5ter. Forge : installation officielle silencieuse (comme CurseForge) ----
         if (loader.Equals("Forge", StringComparison.OrdinalIgnoreCase))
         {
-            progress("Installation de Forge", 0, 0);
+            progress(Lang.T("Installation de Forge", "Installing Forge"), 0, 0);
             string forgeId = await EnsureForgeInstalledAsync(versionId, ct);
 
             string forgeJsonPath = Path.Combine(VersionsDir, forgeId, forgeId + ".json");
@@ -304,7 +304,7 @@ public static class GameInstaller
                 if (!File.Exists(full))
                     throw new Exception($"Bibliothèque Forge manquante : {name}");
                 forgeCp.Add(full);
-                progress("Bibliothèques Forge", ++done, libElements.Count);
+                progress(Lang.T("Bibliothèques Forge", "Forge libraries"), ++done, libElements.Count);
             }
 
             // Forge hérite des bibliothèques vanilla (inheritsFrom) : Guava, Gson, LWJGL...
@@ -332,7 +332,7 @@ public static class GameInstaller
         // ---- 5bis. Fabric : profil officiel depuis meta.fabricmc.net ----
         if (loader.Equals("Fabric", StringComparison.OrdinalIgnoreCase))
         {
-            progress("Installation de Fabric", 0, 0);
+            progress(Lang.T("Installation de Fabric", "Installing Fabric"), 0, 0);
             string fabricId = await EnsureFabricInstalledAsync(versionId, ct);
             string fabricJsonPath = Path.Combine(VersionsDir, fabricId, fabricId + ".json");
             using var fj2 = JsonDocument.Parse(await File.ReadAllTextAsync(fabricJsonPath, ct));

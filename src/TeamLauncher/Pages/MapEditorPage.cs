@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.IO.Compression;
 
@@ -35,14 +36,15 @@ public class MapEditorPage : UserControl, IRefreshable
         });
         root.Controls.Add(new Label
         {
-            Text = "Sélectionne une instance, puis un monde. Glisse la souris pour sélectionner des chunks,\n" +
-                   "puis supprime-les (terres abandonnées, chunks corrompus, reset de zones...).",
+            Text = Lang.T("Sélectionne une instance, puis un monde. Glisse la souris pour sélectionner des chunks,\n" +
+                   "puis supprime-les (terres abandonnées, chunks corrompus, reset de zones...).", "Select an instance, then a world. Drag to select chunks,\n" +
+                   "then delete them (abandoned terrain, corrupted chunks, zone resets...)."),
             ForeColor = Theme.TextDim, AutoSize = true
         });
 
         // ---- Instance selector ----
         var row1 = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 12, 0, 0) };
-        var instLabel = new Label { Text = "Instance :", ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
+        var instLabel = new Label {             Text = Lang.T("Instance :", "Instance:"), ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
         instanceBox.Width = 280; instanceBox.Font = new Font("Segoe UI", 10f);
         row1.Controls.Add(instLabel);
         row1.Controls.Add(instanceBox);
@@ -51,7 +53,7 @@ public class MapEditorPage : UserControl, IRefreshable
         // ---- World selector (cards) ----
         root.Controls.Add(new Label
         {
-            Text = "Monde :", ForeColor = Theme.TextDim,
+            Text = Lang.T("Monde :", "World:"), ForeColor = Theme.TextDim,
             AutoSize = true, Margin = new Padding(0, 12, 0, 4)
         });
 
@@ -67,6 +69,7 @@ public class MapEditorPage : UserControl, IRefreshable
         tools.Controls.Add(MkBtn("🗑 Supprimer la sélection", true, (_, _) => DeleteSelection()));
         tools.Controls.Add(MkBtn("✖ Tout désélectionner", false, (_, _) => { canvas.ClearSelection(); UpdateStats(); }));
         tools.Controls.Add(MkBtn("💾 Sauvegarder le monde", false, (_, _) => BackupWorld()));
+        tools.Controls.Add(MkBtn("🏙 Générer une ville (OSM)", false, (_, _) => GenerateCityNative()));
         tools.Controls.Add(MkBtn("⟳ Actualiser", false, (_, _) => { LoadWorldList(); LoadWorldChunks(); }));
 
         statsLabel.ForeColor = Theme.Text;
@@ -93,6 +96,114 @@ public class MapEditorPage : UserControl, IRefreshable
         Theme.Apply(b, primary);
         b.Click += onClick;
         return b;
+    }
+
+    // ---- Outil natif : Générateur de ville OSM ----
+    private async void GenerateCityNative()
+    {
+        string? worldPath = _selectedWorld;
+        if (worldPath == null)
+        {
+            MessageBox.Show(Lang.T("Sélectionne d'abord un monde.", "Select a world first."), "Team Launcher");
+            return;
+        }
+
+        var result = PromptArnisLocation();
+        if (result == null) return;
+
+        var (name, bbox) = result.Value;
+
+        try
+        {
+            UpdateStats(Lang.T($"Récupération des données OSM pour « {name} »...", $"Fetching OSM data for \"{name}\"..."));
+
+            var progress = new Progress<string>(msg => UpdateStats(msg));
+            var osmData = await CityGenerator.FetchOsmDataAsync(bbox, progress);
+
+            UpdateStats(Lang.T($"Placement de {osmData.Entities.Count} entités dans le monde...", $"Placing {osmData.Entities.Count} entities in world..."));
+
+            int placed = await CityGenerator.GenerateInWorldAsync(worldPath, osmData, baseY: 64, progress);
+
+            UpdateStats(Lang.T($"Ville « {name} » générée ! {placed} blocs placés.", $"City \"{name}\" generated! {placed} blocks placed."));
+            MessageBox.Show(
+                Lang.T($"Ville « {name} » générée avec succès !\n{placed} blocs placés dans le monde.", $"City \"{name}\" generated successfully!\n{placed} blocks placed in the world."),
+                "Team Launcher");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher");
+            UpdateStats("Erreur génération ville.");
+        }
+    }
+
+    private static (string Name, string BBox)? PromptArnisLocation()
+    {
+        string? result = null;
+        string? bbox = null;
+        using var dlg = new Form
+        {
+            Text = "Arnis — Générer une ville réelle",
+            Size = new Size(500, 220),
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            StartPosition = FormStartPosition.CenterParent,
+            MaximizeBox = false, BackColor = Theme.Panel
+        };
+        var nameBox = new TextBox
+        {
+            Width = 400, Font = new Font("Segoe UI", 10f),
+            Location = new Point(40, 16),
+            PlaceholderText = "Nom de la ville (ex: Paris, Lyon, Marseille)"
+        };
+        var bboxBox = new TextBox
+        {
+            Width = 400, Font = new Font("Consolas", 10f),
+            Location = new Point(40, 56),
+            PlaceholderText = "Bounding box (min_lon,min_lat,max_lon,max_lat)"
+        };
+        var hint = new Label
+        {
+            Text = "Ex: Paris = 2.35,48.86,2.35,48.86  |  Trouve les coordonnées sur openstreetmap.org",
+            ForeColor = Theme.TextDim, AutoSize = true,
+            Location = new Point(40, 90)
+        };
+        var ok = new Button { Text = "Générer", Width = 120, Height = 36, Location = new Point(180, 120) };
+        Theme.Apply(ok, primary: true);
+        ok.Click += (_, _) => { result = nameBox.Text.Trim(); bbox = bboxBox.Text.Trim(); dlg.Close(); };
+        dlg.Controls.Add(nameBox);
+        dlg.Controls.Add(bboxBox);
+        dlg.Controls.Add(hint);
+        dlg.Controls.Add(ok);
+        dlg.ShowDialog();
+        if (string.IsNullOrWhiteSpace(result) || string.IsNullOrWhiteSpace(bbox)) return null;
+        return (result, bbox);
+    }
+
+    private static string FindJava()
+    {
+        string[] paths = [
+            @"C:\Program Files\Java\jre*\bin\javaw.exe",
+            @"C:\Program Files\Java\jdk*\bin\javaw.exe",
+            @"C:\Program Files\Eclipse Adoptium\*\bin\javaw.exe",
+            @"C:\Program Files\Microsoft\*\bin\javaw.exe"
+        ];
+
+        foreach (var pattern in paths)
+        {
+            var found = Directory.GetFiles(Path.GetDirectoryName(pattern)!, Path.GetFileName(pattern))
+                .OrderByDescending(f => f).FirstOrDefault();
+            if (found != null) return found;
+        }
+
+        try
+        {
+            var psi = new ProcessStartInfo("java", "-version") { RedirectStandardError = true, UseShellExecute = false };
+            var p = Process.Start(psi);
+            p?.WaitForExit(3000);
+            return "java";
+        }
+        catch { }
+
+        return null;
     }
 
     public void RefreshData()
@@ -125,7 +236,7 @@ public class MapEditorPage : UserControl, IRefreshable
         string? dir = WorldsDir;
         if (dir == null || !Directory.Exists(dir))
         {
-            UpdateStats("Aucune instance sélectionnée.");
+            UpdateStats(Lang.T("Aucune instance sélectionnée.", "No instance selected."));
             worldsPanel.ResumeLayout();
             return;
         }

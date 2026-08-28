@@ -36,7 +36,7 @@ public class HomePage : UserControl, IRefreshable
 
         var subtitle = new Label
         {
-            Text = "Reprends ta partie ou choisis une instance dans la liste.",
+            Text = Lang.T("Reprends ta partie ou choisis une instance dans la liste.", "Pick up where you left off or choose an instance from the list."),
             ForeColor = Theme.TextDim,
             Font = new Font("Segoe UI", 9.5f),
             AutoSize = true,
@@ -59,7 +59,7 @@ public class HomePage : UserControl, IRefreshable
         // ================= LISTE =================
         var listHeader = new Label
         {
-            Text = "Toutes les instances",
+            Text = Lang.T("Toutes les instances", "All instances"),
             ForeColor = Theme.TextDim,
             Font = new Font("Segoe UI", 9.5f),
             AutoSize = true,
@@ -139,7 +139,7 @@ public class HomePage : UserControl, IRefreshable
         {
             listFlow.Visible = false;
             emptyLabel.Visible = true;
-            emptyLabel.Text = "Aucune instance pour l'instant. Va dans « Instances » pour en créer une.";
+            emptyLabel.Text = Lang.T("Aucune instance pour l'instant. Va dans « Instances » pour en créer une.", "No instances yet. Go to \"Instances\" to create one.");
         }
         else if (visible.Count == 0)
         {
@@ -200,7 +200,7 @@ public class HomePage : UserControl, IRefreshable
 
         var play = new Button
         {
-            Text = "Jouer",
+            Text = Lang.T("Jouer", "Play"),
             Size = new Size(96, 32),
             Font = new Font("Segoe UI", 9.5f)
         };
@@ -256,7 +256,7 @@ public class HomePage : UserControl, IRefreshable
 
         var play = new Button
         {
-            Text = "Jouer",
+            Text = Lang.T("Jouer", "Play"),
             Size = new Size(80, 28),
             Font = new Font("Segoe UI", 9f)
         };
@@ -265,7 +265,7 @@ public class HomePage : UserControl, IRefreshable
 
         var details = new Button
         {
-            Text = "Détails",
+            Text = Lang.T("Détails", "Details"),
             Size = new Size(80, 28),
             Font = new Font("Segoe UI", 9f),
             Margin = new Padding(6, 0, 0, 0)

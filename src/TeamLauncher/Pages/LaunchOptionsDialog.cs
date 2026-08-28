@@ -28,7 +28,7 @@ public class LaunchOptionsDialog : Form
 
         layout.Controls.Add(new Label
         {
-            Text = "Mémoire allouée (Go)", ForeColor = Theme.Text,
+            Text = Lang.T("Mémoire allouée (Go)", "Allocated memory (GB)"), ForeColor = Theme.Text,
             Font = new Font("Segoe UI", 10f, FontStyle.Bold), AutoSize = true
         });
         ram.Minimum = 1; ram.Maximum = 32; ram.Width = 100;
@@ -42,7 +42,7 @@ public class LaunchOptionsDialog : Form
 
         layout.Controls.Add(new Label
         {
-            Text = "\nArguments JVM supplémentaires (optionnel)",
+            Text = Lang.T("\nArguments JVM supplémentaires (optionnel)", "\nAdditional JVM arguments (optional)"),
             ForeColor = Theme.Text,
             Font = new Font("Segoe UI", 10f, FontStyle.Bold), AutoSize = true
         });

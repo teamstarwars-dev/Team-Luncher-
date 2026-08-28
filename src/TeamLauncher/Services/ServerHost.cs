@@ -297,10 +297,47 @@ public static class ServerHost
             int idx = line.IndexOf("joined the game", StringComparison.Ordinal);
             if (idx < 0) return;
             var s = DataStore.Settings.HostedServers.FirstOrDefault(h => h.Id == id);
-            if (s == null || string.IsNullOrWhiteSpace(s.WelcomeMessage)) return;
+            if (s == null) return;
             var name = line[..idx].TrimEnd().Split(' ').LastOrDefault()?.Trim() ?? "";
             if (name.Length == 0 || name.Length > 16 || !name.All(c => char.IsLetterOrDigit(c) || c == '_')) return;
-            SendCommand(id, "say " + s.WelcomeMessage.Replace("{joueur}", name));
+
+            // Message de bienvenue
+            if (!string.IsNullOrWhiteSpace(s.WelcomeMessage))
+                SendCommand(id, "say " + s.WelcomeMessage.Replace("{joueur}", name));
+
+            // Notification Discord
+            if (!string.IsNullOrWhiteSpace(s.DiscordWebhookUrl))
+                _ = SendDiscordWebhookAsync(s.DiscordWebhookUrl, $"🟢 **{name}** a rejoint **{s.Name}** !");
+        }
+        catch { }
+    }
+
+    /// <summary>Détection de déconnexion pour Discord.</summary>
+    private static void DetectLeaveAndNotify(string id, string line)
+    {
+        try
+        {
+            int idx = line.IndexOf("left the game", StringComparison.Ordinal);
+            if (idx < 0) return;
+            var s = DataStore.Settings.HostedServers.FirstOrDefault(h => h.Id == id);
+            if (s == null || string.IsNullOrWhiteSpace(s.DiscordWebhookUrl)) return;
+            var name = line[..idx].TrimEnd().Split(' ').LastOrDefault()?.Trim() ?? "";
+            if (name.Length > 0 && name.Length <= 16)
+                _ = SendDiscordWebhookAsync(s.DiscordWebhookUrl, $"🔴 **{name}** a quitté **{s.Name}**.");
+        }
+        catch { }
+    }
+
+    /// <summary>Envoie un message via un webhook Discord.</summary>
+    private static async Task SendDiscordWebhookAsync(string webhookUrl, string message)
+    {
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            var payload = new { content = message };
+            var json = System.Text.Json.JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            await http.PostAsync(webhookUrl, content);
         }
         catch { }
     }
@@ -367,6 +404,7 @@ public static class ServerHost
         {
             if (e.Data == null) return;
             DetectJoinAndWelcome(s.Id, e.Data);
+            DetectLeaveAndNotify(s.Id, e.Data);
             Emit(s.Id, e.Data);
         };
         p.ErrorDataReceived += (_, e) => { if (e.Data != null) Emit(s.Id, e.Data); };

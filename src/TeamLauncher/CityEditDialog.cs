@@ -33,7 +33,7 @@ public class CityEditDialog : Form
         };
         root.Controls.Add(MkLabel(Lang.T("Nom de la ville", "City name")));
         root.Controls.Add(nameBox);
-        root.Controls.Add(MkLabel(Lang.T("Propriétaire", "Owner")));
+        root.Controls.Add(MkLabel(Lang.T("Propriétaire (optionnel)", "Owner (optional)")));
         root.Controls.Add(ownerBox);
         root.Controls.Add(MkLabel(Lang.T("Adresse du serveur", "Server address")));
         root.Controls.Add(addressBox);

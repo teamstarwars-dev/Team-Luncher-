@@ -33,7 +33,7 @@ public class NewsPage : UserControl, IRefreshable
 
         root.Controls.Add(new Label
         {
-            Text = "ACTUALITÉS", ForeColor = Theme.Text,
+            Text = Lang.T("ACTUALITÉS", "NEWS"), ForeColor = Theme.Text,
             Font = Theme.Title,
             AutoSize = true
         });

@@ -28,7 +28,7 @@ public class ExplorerPage : UserControl, IRefreshable
 
         var title = new Label
         {
-            Text = "Explorateur",
+            Text = Lang.T("Explorateur", "Explorer"),
             ForeColor = Theme.Text,
             Font = Theme.Title,
             AutoSize = true,
@@ -37,7 +37,7 @@ public class ExplorerPage : UserControl, IRefreshable
 
         var hint = new Label
         {
-            Text = "Fichiers et dossiers de tes instances.",
+            Text = Lang.T("Fichiers et dossiers de tes instances.", "Files and folders of your instances."),
             ForeColor = Theme.TextDim,
             Font = new Font("Segoe UI", 9.5f),
             AutoSize = true,
@@ -92,7 +92,7 @@ public class ExplorerPage : UserControl, IRefreshable
 
         var openWinBtn = new Button
         {
-            Text = "Ouvrir dans Windows",
+            Text = Lang.T("Ouvrir dans Windows", "Open in Windows"),
             Size = new Size(140, 30),
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI", 8.5f),

@@ -29,14 +29,14 @@ public class EditPage : UserControl, IRefreshable
 
         var title = new Label
         {
-            Text = "Édition",
+            Text = Lang.T("Édition", "Edit"),
             ForeColor = Theme.Text,
             Font = Theme.Title,
             AutoSize = true
         };
         var hint = new Label
         {
-            Text = "Modifie la carte d'une instance : nom, image, description.",
+            Text = Lang.T("Modifie la carte d'une instance : nom, image, description.", "Edit an instance: name, image, description."),
             ForeColor = Theme.TextDim,
             AutoSize = true
         };
@@ -52,7 +52,7 @@ public class EditPage : UserControl, IRefreshable
         descBox.Multiline = true;
         imageBox.Width = 420;
 
-        var imgBtn = new Button { Text = "Choisir une image...", Width = 200, Height = 36 };
+        var imgBtn = new Button { Text = Lang.T("Choisir une image...", "Choose an image..."), Width = 200, Height = 36 };
         Theme.Apply(imgBtn);
         imgBtn.Click += (_, _) =>
         {
@@ -64,7 +64,7 @@ public class EditPage : UserControl, IRefreshable
             }
         };
 
-        var save = new Button { Text = "Enregistrer les modifications", Width = 260, Height = 42 };
+        var save = new Button { Text = Lang.T("Enregistrer les modifications", "Save changes"), Width = 260, Height = 42 };
         Theme.Apply(save, primary: true);
         save.Margin = new Padding(0, 16, 0, 0);
         save.Click += (_, _) => Save();
@@ -96,7 +96,7 @@ public class EditPage : UserControl, IRefreshable
         backupList.Height = 90;
 
         var backupRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 0) };
-        var restoreBtn = new Button { Text = "Restaurer", Width = 130, Height = 34 };
+        var restoreBtn = new Button { Text = Lang.T("Restaurer", "Restore"), Width = 130, Height = 34 };
         Theme.Apply(restoreBtn);
         restoreBtn.Click += (_, _) =>
         {
@@ -111,7 +111,7 @@ public class EditPage : UserControl, IRefreshable
             }
             catch (Exception ex) { MessageBox.Show(ex.Message, "Team Launcher"); }
         };
-        var deleteBtn = new Button { Text = "Supprimer", Width = 110, Height = 34, Margin = new Padding(8, 0, 0, 0) };
+        var deleteBtn = new Button { Text = Lang.T("Supprimer", "Delete"), Width = 110, Height = 34, Margin = new Padding(8, 0, 0, 0) };
         Theme.Apply(deleteBtn);
         deleteBtn.Click += (_, _) =>
         {

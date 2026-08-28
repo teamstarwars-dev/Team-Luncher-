@@ -5,15 +5,32 @@ namespace TeamLauncher;
 /// <summary>
 /// Rendu 3D temps réel du modèle Minecraft (tête, corps, bras, jambes) à partir
 /// d'un fichier de skin : quads texturés par mapping affine, triés par profondeur.
-/// Timer de rotation toujours actif quand le skin est chargé.
+/// Modes : idle (rotation lente) et marche (animation de bras/jambes).
 /// </summary>
 public class SkinPreview : Control
 {
     private Bitmap? _skin;
     private float _angle;
+    private float _walkPhase;
+    private bool _walking;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 33 };
 
     private sealed record Quad(PointF[] Dst, RectangleF Uv, float Depth);
+
+    /// <summary>
+    /// Active/désactive l'animation de marche.
+    /// </summary>
+    public bool Walking
+    {
+        get => _walking;
+        set
+        {
+            _walking = value;
+            _walkPhase = 0;
+            if (_skin != null && !_timer.Enabled) _timer.Start();
+            Invalidate();
+        }
+    }
 
     public SkinPreview()
     {
@@ -27,8 +44,16 @@ public class SkinPreview : Control
     private void OnTimerTick(object? s, EventArgs e)
     {
         if (_skin == null) return;
-        _angle += 0.04f;
-        if (_angle > MathF.PI * 2) _angle -= MathF.PI * 2;
+        if (_walking)
+        {
+            _walkPhase += 0.12f;
+            if (_walkPhase > MathF.PI * 2) _walkPhase -= MathF.PI * 2;
+        }
+        else
+        {
+            _angle += 0.04f;
+            if (_angle > MathF.PI * 2) _angle -= MathF.PI * 2;
+        }
         Invalidate();
     }
 
@@ -40,6 +65,7 @@ public class SkinPreview : Control
         if (_skin != null)
         {
             _angle = -0.3f;
+            _walkPhase = 0;
             if (!_timer.Enabled) _timer.Start();
         }
         else
@@ -66,7 +92,6 @@ public class SkinPreview : Control
             return;
         }
 
-        // Fond légèrement assombri pour mieux voir le modèle
         using (var bg = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
             g.FillRectangle(bg, ClientRectangle);
 
@@ -75,13 +100,17 @@ public class SkinPreview : Control
         float cy = Height * 0.42f;
         float cos = MathF.Cos(_angle), sin = MathF.Sin(_angle);
 
+        // Walk animation offsets
+        float armSwing = _walking ? MathF.Sin(_walkPhase) * 0.6f : 0f;
+        float legSwing = _walking ? MathF.Sin(_walkPhase + MathF.PI) * 0.5f : 0f;
+        float bodyBob = _walking ? MathF.Abs(MathF.Sin(_walkPhase * 2)) * 0.3f : 0f;
+
         PointF Project(float x, float y, float z)
         {
             float rx = x * cos + z * sin;
             float rz = -x * sin + z * cos;
-            // Léger effet de perspective
             float persp = 1f + rz * 0.015f;
-            return new PointF(cx + rx * s * persp, cy + y * s * persp);
+            return new PointF(cx + rx * s * persp, cy + (y - bodyBob) * s * persp);
         }
 
         var faces = new List<Quad>();
@@ -111,38 +140,57 @@ public class SkinPreview : Control
             Face(top,   (x0, y0, z0), (x1, y0, z0), (x1, y0, z1), (x0, y0, z1));
         }
 
-        // Modèle Minecraft 1.8+ — proportions en unités modèle
-        // Tête : 8x8x8, centrée sur x/z
+        // Modèle Minecraft 1.8+
+        // Tête
         Box(-4, 4, -12, -4, -4, 4,
             UV(8,8,8,8), UV(24,8,8,8), UV(16,8,8,8),
             UV(0,8,8,8), UV(8,0,8,8));
 
-        // Corps : 8x12x4
+        // Corps
         Box(-4, 4, -4, 8, -2, 2,
             UV(20,20,8,12), UV(32,20,8,12), UV(28,20,4,12),
             UV(16,20,4,12), UV(20,16,8,4));
 
-        // Bras gauche : 4x12x4
-        Box(-6, -2, -4, 8, -2, 2,
+        // Bras gauche — pivot à l'épaule
+        float laY0 = -4, laY1 = 8;
+        float laRot = -armSwing;
+        float laX0 = -6 + MathF.Sin(laRot) * 1f;
+        float laX1 = -2 + MathF.Sin(laRot) * 1f;
+        float laZ0 = -2 + MathF.Cos(laRot) * -1f;
+        float laZ1 =  2 + MathF.Cos(laRot) * -1f;
+        Box(laX0, laX1, laY0, laY1, laZ0, laZ1,
             UV(44,20,4,12), UV(52,20,4,12), UV(48,20,4,12),
             UV(40,20,4,12), UV(44,16,4,4));
 
-        // Bras droit : 4x12x4
-        Box(2, 6, -4, 8, -2, 2,
+        // Bras droit — pivot à l'épaule
+        float raX0 = 2 + MathF.Sin(-laRot) * -1f;
+        float raX1 = 6 + MathF.Sin(-laRot) * -1f;
+        float raZ0 = -2 + MathF.Cos(-laRot) * 1f;
+        float raZ1 =  2 + MathF.Cos(-laRot) * 1f;
+        Box(raX0, raX1, laY0, laY1, raZ0, raZ1,
             UV(40,52,4,12), UV(48,52,4,12), UV(44,52,4,12),
             UV(36,52,4,12), UV(44,48,4,4));
 
-        // Jambe gauche : 4x12x4
-        Box(-4, 0, 8, 20, -2, 2,
+        // Jambe gauche — pivot à la hanche
+        float llRot = legSwing;
+        float llX0 = -4 + MathF.Sin(llRot) * 0.5f;
+        float llX1 =  0 + MathF.Sin(llRot) * 0.5f;
+        float llZ0 = -2 + MathF.Cos(llRot) * -0.5f;
+        float llZ1 =  2 + MathF.Cos(llRot) * -0.5f;
+        Box(llX0, llX1, 8, 20, llZ0, llZ1,
             UV(4,20,4,12), UV(12,20,4,12), UV(8,20,4,12),
             UV(0,20,4,12), UV(4,16,4,4));
 
-        // Jambe droite : 4x12x4
-        Box(0, 4, 8, 20, -2, 2,
+        // Jambe droite
+        float lrRot = -legSwing;
+        float lrX0 = 0 + MathF.Sin(lrRot) * 0.5f;
+        float lrX1 = 4 + MathF.Sin(lrRot) * 0.5f;
+        float lrZ0 = -2 + MathF.Cos(lrRot) * 0.5f;
+        float lrZ1 =  2 + MathF.Cos(lrRot) * 0.5f;
+        Box(lrX0, lrX1, 8, 20, lrZ0, lrZ1,
             UV(20,52,4,12), UV(28,52,4,12), UV(24,52,4,12),
             UV(16,52,4,12), UV(20,48,4,4));
 
-        // Dessiner du fond vers l'avant (painter's algorithm)
         foreach (var f in faces.OrderByDescending(f => f.Depth))
             TexQuad(g, _skin!, f.Dst, f.Uv);
     }

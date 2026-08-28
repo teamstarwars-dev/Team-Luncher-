@@ -57,10 +57,11 @@ public class ServersPage : UserControl, IRefreshable
         // ================= ONGLET 1 : MES SERVEURS HÉBERGÉS =================
 
         var hostedPage = new TabPage("Mes serveurs") { BackColor = Theme.Bg };
-        var hostedRoot = new FlowLayoutPanel
+        var hostedRoot = new Panel
         {
-            Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
-            WrapContents = false, AutoScroll = true,
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = Theme.Bg,
             Padding = new Padding(24, 16, 24, 16)
         };
 
@@ -162,20 +163,29 @@ public class ServersPage : UserControl, IRefreshable
         hostedList.FlowDirection = FlowDirection.TopDown;
         hostedList.WrapContents = false;
         hostedList.AutoScroll = true;
-        hostedList.Margin = new Padding(0, 4, 0, 0);
-        hostedList.Width = 940;
+        hostedList.BackColor = Theme.Bg;
 
-        hostedRoot.Controls.Add(createRow);
         hostedRoot.Controls.Add(hostedList);
+        hostedRoot.Resize += (_, _) =>
+        {
+            var lbl = hostedRoot.Controls.Count > 0 ? hostedRoot.Controls[0] as Label : null;
+            if (lbl != null) { lbl.Location = new Point(0, 0); lbl.Width = hostedRoot.ClientSize.Width - 48; }
+            createRow.Location = new Point(0, 50);
+            createRow.Width = hostedRoot.ClientSize.Width - 48;
+            hostedList.Location = new Point(0, 110);
+            hostedList.Width = hostedRoot.ClientSize.Width - 48;
+            hostedList.Height = hostedRoot.ClientSize.Height - 120;
+        };
         hostedPage.Controls.Add(hostedRoot);
 
         // ================= ONGLET 2 : SERVEURS FAVORIS =================
 
         var favPage = new TabPage("Favoris") { BackColor = Theme.Bg };
-        var favRoot = new FlowLayoutPanel
+        var favRoot = new Panel
         {
-            Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
-            WrapContents = false, AutoScroll = true,
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = Theme.Bg,
             Padding = new Padding(24, 16, 24, 16)
         };
 
@@ -190,10 +200,8 @@ public class ServersPage : UserControl, IRefreshable
         serverList.FlowDirection = FlowDirection.TopDown;
         serverList.WrapContents = false;
         serverList.AutoScroll = true;
-        serverList.Width = 940;
         serverList.BackColor = Theme.Bg;
-        serverList.Margin = new Padding(0, 8, 0, 0);
-        var btnRow = new Panel { Height = 52, Width = 920, Margin = new Padding(0, 10, 0, 0) };
+        var btnRow = new Panel { Height = 52 };
         addressBox.SetBounds(0, 8, 360, 32);
         addressBox.Font = new Font("Consolas", 10f);
         addressBox.BorderStyle = BorderStyle.FixedSingle;
@@ -226,15 +234,26 @@ public class ServersPage : UserControl, IRefreshable
 
         favRoot.Controls.Add(btnRow);
         favRoot.Controls.Add(serverList);
+        favRoot.Resize += (_, _) =>
+        {
+            var lbl = favRoot.Controls.Count > 0 ? favRoot.Controls[0] as Label : null;
+            if (lbl != null) { lbl.Location = new Point(0, 0); lbl.Width = favRoot.ClientSize.Width - 48; }
+            btnRow.Location = new Point(0, 40);
+            btnRow.Width = favRoot.ClientSize.Width - 48;
+            serverList.Location = new Point(0, 96);
+            serverList.Width = favRoot.ClientSize.Width - 48;
+            serverList.Height = favRoot.ClientSize.Height - 106;
+        };
         favPage.Controls.Add(favRoot);
 
         // ================= ONGLET 3 : VILLES DE LA TEAM =================
 
         var cityPage = new TabPage("Villes de la team") { BackColor = Theme.Bg };
-        var cityRoot = new FlowLayoutPanel
+        var cityRoot = new Panel
         {
-            Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
-            WrapContents = false, AutoScroll = true,
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = Theme.Bg,
             Padding = new Padding(24, 16, 24, 16)
         };
 
@@ -249,11 +268,9 @@ public class ServersPage : UserControl, IRefreshable
         cityList.FlowDirection = FlowDirection.TopDown;
         cityList.WrapContents = false;
         cityList.AutoScroll = true;
-        cityList.Width = 940;
         cityList.BackColor = Theme.Bg;
-        cityList.Margin = new Padding(0, 8, 0, 0);
 
-        var cityBtnRow = new Panel { Height = 52, Width = 920, Margin = new Padding(0, 10, 0, 0) };
+        var cityBtnRow = new Panel { Height = 52 };
         var addCityBtn = MkBtn("+ Ajouter ma ville", primary: true, x: 0, w: 200);
         addCityBtn.Click += (_, _) => EditCity(null);
         var editCityBtn = MkBtn("Modifier", primary: false, x: 208, w: 130);
@@ -285,17 +302,20 @@ public class ServersPage : UserControl, IRefreshable
 
         cityRoot.Controls.Add(cityBtnRow);
         cityRoot.Controls.Add(cityList);
+        cityRoot.Resize += (_, _) =>
+        {
+            var lbl = cityRoot.Controls.Count > 0 ? cityRoot.Controls[0] as Label : null;
+            if (lbl != null) { lbl.Location = new Point(0, 0); lbl.Width = cityRoot.ClientSize.Width - 48; }
+            cityBtnRow.Location = new Point(0, 40);
+            cityBtnRow.Width = cityRoot.ClientSize.Width - 48;
+            cityList.Location = new Point(0, 96);
+            cityList.Width = cityRoot.ClientSize.Width - 48;
+            cityList.Height = cityRoot.ClientSize.Height - 106;
+        };
         cityPage.Controls.Add(cityRoot);
 
         tabs.TabPages.AddRange(new[] { hostedPage, favPage, cityPage });
         Controls.Add(tabs);
-
-        Resize += (_, _) =>
-        {
-            btnRow.Width = Math.Max(600, Width - 48);
-            createRow.Width = btnRow.Width;
-            cityBtnRow.Width = btnRow.Width;
-        };
 
         ServerHost.StateChanged += OnHostStateChanged;
         ServerHost.DownloadProgress += OnDownloadProgress;

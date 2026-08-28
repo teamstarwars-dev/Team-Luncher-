@@ -24,8 +24,7 @@ public class SkinsPage : UserControl, IRefreshable
     private string _hoverFile = "";
 
     private static readonly string FavFile = Path.Combine(
-        Path.GetDirectoryName(typeof(SkinsPage).Assembly.Location)!,
-        "..", "..", "..", "skins-favorites.json");
+        AppContext.BaseDirectory, "skins-favorites.json");
 
     private sealed class OnlineSkin
     {

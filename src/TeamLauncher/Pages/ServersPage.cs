@@ -167,6 +167,7 @@ public class ServersPage : UserControl, IRefreshable
 
         hostedRoot.Controls.Add(createRow);
         hostedRoot.Controls.Add(hostedList);
+        hostedPage.Controls.Add(hostedRoot);
 
         // ================= ONGLET 2 : SERVEURS FAVORIS =================
 
@@ -225,6 +226,7 @@ public class ServersPage : UserControl, IRefreshable
 
         favRoot.Controls.Add(btnRow);
         favRoot.Controls.Add(serverList);
+        favPage.Controls.Add(favRoot);
 
         // ================= ONGLET 3 : VILLES DE LA TEAM =================
 
@@ -283,6 +285,7 @@ public class ServersPage : UserControl, IRefreshable
 
         cityRoot.Controls.Add(cityBtnRow);
         cityRoot.Controls.Add(cityList);
+        cityPage.Controls.Add(cityRoot);
 
         tabs.TabPages.AddRange(new[] { hostedPage, favPage, cityPage });
         Controls.Add(tabs);

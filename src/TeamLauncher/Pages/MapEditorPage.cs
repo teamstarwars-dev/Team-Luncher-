@@ -5,15 +5,15 @@ using System.IO.Compression;
 namespace TeamLauncher;
 
 /// <summary>
-/// Éditeur de mondes façon MCA Selector :
-/// rendu des chunks des régions .mca sur une grille, sélection au lasso,
-/// suppression physique des chunks sélectionnés (réécriture propre des .mca).
+/// Éditeur de mondes avec onglets : édition 2D chunks (MCA), viewer 3D isométrique, et viewer de modèles.
 /// </summary>
 public class MapEditorPage : UserControl, IRefreshable
 {
     private readonly ComboBox instanceBox = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly FlowLayoutPanel worldsPanel = new();
     private readonly EditorCanvas canvas = new();
+    private readonly WorldViewer3D worldViewer3D = new();
+    private readonly ModelViewer3D modelViewer3D = new();
     private readonly Label statsLabel = new();
     private string? _selectedWorld;
 
@@ -44,7 +44,7 @@ public class MapEditorPage : UserControl, IRefreshable
 
         // ---- Instance selector ----
         var row1 = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 12, 0, 0) };
-        var instLabel = new Label {             Text = Lang.T("Instance :", "Instance:"), ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
+        var instLabel = new Label { Text = Lang.T("Instance :", "Instance:"), ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
         instanceBox.Width = 280; instanceBox.Font = new Font("Segoe UI", 10f);
         row1.Controls.Add(instLabel);
         row1.Controls.Add(instanceBox);
@@ -77,14 +77,81 @@ public class MapEditorPage : UserControl, IRefreshable
         statsLabel.AutoSize = true;
         statsLabel.Margin = new Padding(4, 2, 0, 2);
 
-        // canevas
-        canvas.Dock = DockStyle.Fill; canvas.Height = 430; canvas.Width = 920;
+        // ---- Onglets pour les vues ----
+        var viewTabs = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            DrawMode = TabDrawMode.OwnerDrawFixed,
+            ItemSize = new Size(160, 30),
+            Font = new Font("Segoe UI", 8.75f),
+            Padding = new Point(10, 2),
+            Height = 440
+        };
+        viewTabs.DrawItem += (_, e) =>
+        {
+            bool sel = viewTabs.SelectedIndex == e.Index;
+            using (var b = new SolidBrush(sel ? Theme.Card : Theme.Bg))
+                e.Graphics.FillRectangle(b, e.Bounds);
+            if (sel)
+                using (var b = new SolidBrush(Theme.Accent))
+                    e.Graphics.FillRectangle(b, e.Bounds.X, e.Bounds.Bottom - 2, e.Bounds.Width, 2);
+            TextRenderer.DrawText(e.Graphics, viewTabs.TabPages[e.Index].Text,
+                new Font("Segoe UI", 8.75f), e.Bounds,
+                sel ? Theme.Text : Theme.TextDim,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        };
+
+        // Onglet 1 : Éditeur 2D (chunks)
+        var editorPage = new TabPage("🗺 Éditeur 2D") { BackColor = Theme.Bg };
+        canvas.Dock = DockStyle.Fill;
         canvas.BackColor = Color.FromArgb(18, 20, 24);
         canvas.OnStatsChanged += () => UpdateStats();
+        editorPage.Controls.Add(canvas);
+
+        // Onglet 2 : Vue 3D isométrique
+        var viewer3dPage = new TabPage("🌍 Vue 3D") { BackColor = Theme.Bg };
+        worldViewer3D.Dock = DockStyle.Fill;
+        worldViewer3D.BackColor = Color.FromArgb(18, 20, 24);
+        worldViewer3D.OnStatusChanged += msg => UpdateStats(msg);
+        viewer3dPage.Controls.Add(worldViewer3D);
+
+        // Onglet 3 : Viewer de modèles
+        var modelPage = new TabPage("📐 Modèles 3D") { BackColor = Theme.Bg };
+        var modelPanel = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg };
+
+        var modelBtnRow = new FlowLayoutPanel { Height = 40, Dock = DockStyle.Top, AutoSize = true };
+        var loadModelBtn = MkBtn("📂 Ouvrir un modèle (.bbmodel / .json)", false, (_, _) =>
+        {
+            using var ofd = new OpenFileDialog
+            {
+                Filter = "Modèles Minecraft|*.bbmodel;*.json|Tous|*.*"
+            };
+            if (ofd.ShowDialog(FindForm()) == DialogResult.OK)
+            {
+                if (modelViewer3D.LoadModel(ofd.FileName))
+                    UpdateStats($"Modèle chargé : {Path.GetFileName(ofd.FileName)}");
+                else
+                    UpdateStats("Impossible de charger le modèle.");
+            }
+        });
+        modelBtnRow.Controls.Add(loadModelBtn);
+        modelBtnRow.Controls.Add(new Label
+        {
+            Text = Lang.T("Glisser pour tourner, molette pour zoomer", "Drag to rotate, scroll to zoom"),
+            ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(12, 8, 0, 0)
+        });
+
+        modelViewer3D.Dock = DockStyle.Fill;
+        modelViewer3D.BackColor = Color.FromArgb(18, 20, 24);
+        modelPanel.Controls.Add(modelViewer3D);
+        modelPanel.Controls.Add(modelBtnRow);
+        modelPage.Controls.Add(modelPanel);
+
+        viewTabs.TabPages.AddRange(new[] { editorPage, viewer3dPage, modelPage });
 
         root.Controls.Add(tools);
         root.Controls.Add(statsLabel);
-        root.Controls.Add(canvas);
+        root.Controls.Add(viewTabs);
         Controls.Add(root);
 
         instanceBox.SelectedIndexChanged += (_, _) => LoadWorldList();
@@ -318,12 +385,14 @@ public class MapEditorPage : UserControl, IRefreshable
         if (worldPath == null)
         {
             canvas.LoadRegions(null);
+            worldViewer3D.LoadWorld(null!);
             UpdateStats("Sélectionne un monde.");
             return;
         }
         try
         {
             canvas.LoadRegions(worldPath);
+            worldViewer3D.LoadWorld(worldPath);
             string name = Path.GetFileName(worldPath);
             UpdateStats($"« {name} » chargé — {canvas.TotalChunks:N0} chunks trouvés. Glisse pour sélectionner.");
         }

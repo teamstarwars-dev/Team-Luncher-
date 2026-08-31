@@ -16,3 +16,10 @@ obj/
 
 # Runtime / caches locaux
 *.jar
+
+# Gros fichiers
+*.zip
+publish/TeamLauncher.exe
+publish/TeamLauncher.pdb
+publish/*.dll
+publish/*.cor3.dll

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 
 namespace TeamLauncher;
@@ -15,8 +16,13 @@ public static class DataStore
     public static string SkinsDir => Path.Combine(Dir, "skins");
     public static string ImagesDir => Path.Combine(Dir, "images");
 
+    /// <summary>Paramètres par défaut embarqués dans l'exe (default.env).</summary>
+    private static readonly Dictionary<string, string> Defaults = new(StringComparer.OrdinalIgnoreCase);
+
     public static void Load()
     {
+        LoadDefaults();
+
         if (!Settings.InstancesDir.Contains("TeamLauncher"))
             Settings.InstancesDir = Path.Combine(Dir, "instances");
 
@@ -30,9 +36,71 @@ public static class DataStore
         }
         catch { /* config corrompue : on garde les valeurs par défaut */ }
 
+        // Appliquer les valeurs par défaut embarquées si le champ est vide
+        ApplyDefaults();
+
         Directory.CreateDirectory(Settings.InstancesDir);
         Directory.CreateDirectory(SkinsDir);
         Directory.CreateDirectory(ImagesDir);
+    }
+
+    /// <summary>
+    /// Charge les paramètres par défaut depuis le fichier default.env embarqué dans l'exe.
+    /// Format : CLE=valeur (une par ligne, # = commentaire).
+    /// </summary>
+    private static void LoadDefaults()
+    {
+        Defaults.Clear();
+        try
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream("TeamLauncher.default.env");
+            if (stream == null) return;
+
+            using var reader = new StreamReader(stream);
+            string? line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                line = line.Trim();
+                if (line.Length == 0 || line.StartsWith('#')) continue;
+
+                int eq = line.IndexOf('=');
+                if (eq <= 0) continue;
+
+                string key = line[..eq].Trim();
+                string value = line[(eq + 1)..].Trim();
+                Defaults[key] = value;
+            }
+        }
+        catch { }
+    }
+
+    /// <summary>Applique les defaults embarqués sur les champs vides de Settings.</summary>
+    private static void ApplyDefaults()
+    {
+        if (string.IsNullOrEmpty(Settings.DiscordAppId) && Defaults.TryGetValue("DISCORD_APP_ID", out var appId))
+            Settings.DiscordAppId = appId;
+
+        if (!Settings.DiscordEnabled && Defaults.TryGetValue("DISCORD_ENABLED", out var discEnabled))
+            Settings.DiscordEnabled = discEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+        if (!Settings.TelemetryEnabled && Defaults.TryGetValue("TELEMETRY_ENABLED", out var telEnabled))
+            Settings.TelemetryEnabled = telEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+        if (string.IsNullOrEmpty(Settings.DiscordTelemetryWebhook) && Defaults.TryGetValue("DISCORD_TELEMETRY_WEBHOOK", out var webhook))
+            Settings.DiscordTelemetryWebhook = webhook;
+
+        if (string.IsNullOrEmpty(Settings.UpdateUrl) && Defaults.TryGetValue("UPDATE_URL", out var updateUrl))
+            Settings.UpdateUrl = updateUrl;
+
+        if (string.IsNullOrEmpty(Settings.Language) && Defaults.TryGetValue("LANGUAGE", out var lang))
+            Settings.Language = lang;
+
+        if (string.IsNullOrEmpty(Settings.CurseForgeApiKey) && Defaults.TryGetValue("CURSEFORGE_API_KEY", out var cfKey))
+            Settings.CurseForgeApiKey = cfKey;
+
+        if (!Settings.FpsCounterEnabled && Defaults.TryGetValue("FPS_COUNTER_ENABLED", out var fpsEnabled))
+            Settings.FpsCounterEnabled = fpsEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
     }
 
     public static void Save()

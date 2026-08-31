@@ -1,5 +1,5 @@
 {
-  "version": "3.5.1",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.1/TeamLauncher.exe",
-  "changelog": "v3.5.1\n\nNouveautés :\n• Barre de titre custom sombre (minimiser/maximiser/fermer)\n• Bouton supprimer sur chaque carte d'instance\n• Fix du bug de sélection d'instance\n• Tous les champs de texte en dark theme\n• Espacement sidebar et page Instances corrigé\n• Système de télémétrie Discord (crashs, stats)\n• Paramètres télémétrie dans Intégrations"
+  "version": "3.5.2",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.2/TeamLauncher.exe",
+  "changelog": "v3.5.2 — Config embarquée\n\nNouveautés :\n• Fichier default.env embarqué dans l'exe\n• Discord Rich Presence pré-activé\n• Télémétrie et webhook pré-configurés\n• URL de mise à jour auto pré-remplie\n• Les utilisateurs n'ont plus rien à configurer"
 }

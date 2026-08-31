@@ -9,9 +9,8 @@ namespace TeamLauncher;
 /// </summary>
 public static class UpdateService
 {
-    // URL du version.json sur GitHub — À MODIFIER avec ton repo
-    // Format : https://raw.githubusercontent.com/TON_USER/TON_REPO/main/version.json
-    private const string VersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/main/version.json";
+    // URL par défaut (fallback si pas défini dans les settings)
+    private const string DefaultVersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/main/version.json";
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
 
     /// <summary>Version actuelle de l'exe.</summary>
@@ -39,7 +38,11 @@ public static class UpdateService
     {
         try
         {
-            string json = await Http.GetStringAsync(VersionUrl);
+            string versionUrl = !string.IsNullOrEmpty(DataStore.Settings.UpdateUrl)
+                ? DataStore.Settings.UpdateUrl
+                : DefaultVersionUrl;
+
+            string json = await Http.GetStringAsync(versionUrl);
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 

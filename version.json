@@ -1,5 +1,5 @@
 {
-  "version": "3.5.3",
+  "version": "3.5.4",
   "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.3/TeamLauncher.exe",
   "changelog": "v3.5.3 — Suppression des bordures blanches\n\nCorrections :\n• Toutes les bordures blanches des TextBox supprimées (FixedSingle → None)\n• Onglets TabControl sans bordures blanches (Appearance=FlatButtons)\n• Cohérence du thème sombre sur toutes les pages"
 }

@@ -480,6 +480,16 @@ public static class GameLauncher
 
         if (isForge)
         {
+            // Optimisations compatibilité GTX 1000 / Pilotes stables
+            args.Add("-Dsun.java2d.d3d=false"); 
+            args.Add("-Dsun.java2d.noddraw=true");
+            // Optimisation RAM et Stabilité GPU pour éviter les crashs "Pilotes"
+            args.Add("-XX:+UseG1GC");
+            args.Add("-XX:MaxGCPauseMillis=200");
+            args.Add("-Dsun.java2d.opengl=true");
+        }
+        if (isForge)
+        {
             // options classiques recommandées pour Forge (launchwrapper)
             args.Add("-Dfml.ignoreInvalidMinecraftCertificates=true");
             args.Add("-Dfml.ignorePatchDiscrepancies=true");
@@ -700,6 +710,8 @@ public static class GameLauncher
         }
     }
 }
+
+
 
 
 

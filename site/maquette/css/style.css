@@ -12,8 +12,8 @@
     --border: #2a2f38;
     --text: #e8eaed;
     --muted: #9aa3ad;
-    --accent: #6fbf4a;          /* vert Minecraft sobre */
-    --accent-dark: #4e8f33;
+    --accent: #3b82f6;          /* bleu */
+    --accent-dark: #2563eb;
     --danger: #f2555a;
 }
 
@@ -156,7 +156,7 @@ h2 { font-size: 1.35rem; margin: 40px 0 16px; }
 .btn-primary {
     background: var(--accent);
     border-color: var(--accent-dark);
-    color: #10230a !important;
+    color: #fff !important;
 }
 
 .btn-big {
@@ -246,7 +246,7 @@ td.no { color: var(--danger); }
     width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
     background: var(--accent);
-    color: #10230a;
+    color: #fff;
     font-weight: 800;
     border: 2px solid var(--accent-dark);
 }

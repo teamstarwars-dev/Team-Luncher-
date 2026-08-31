@@ -1,0 +1,38 @@
+[
+    {
+        "title":  "Test 6 - page suivante",
+        "date":  "2026-08-24",
+        "tag":  "TEST",
+        "text":  "Cette entree apparait sur la page 2 si la pagination marche !"
+    },
+    {
+        "title":  "Test 5 - pagination",
+        "date":  "2026-08-24",
+        "tag":  "TEST",
+        "text":  "Entree de remplissage pour tester les pages."
+    },
+    {
+        "title":  "Test 4 - pagination",
+        "date":  "2026-08-24",
+        "tag":  "TEST",
+        "text":  "Entree de remplissage pour tester les pages."
+    },
+    {
+        "title":  "Test 3 - pagination",
+        "date":  "2026-08-24",
+        "tag":  "TEST",
+        "text":  "Entree de remplissage pour tester les pages."
+    },
+    {
+        "title":  "Test du flux d\u0027actualites",
+        "date":  "2026-08-24",
+        "tag":  "TEST",
+        "text":  "Si tu lis ce message dans l\u0027onglet Actualites du launcher, le script make-news.ps1 fonctionne parfaitement !"
+    },
+    {
+        "title":  "Onglets sur la page Serveurs",
+        "date":  "2026-08-24",
+        "tag":  "MAJ",
+        "text":  "Mes serveurs et favoris sont maintenant en onglets, avec console integree et progression du telechargement."
+    }
+]

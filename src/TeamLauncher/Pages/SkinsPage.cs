@@ -107,7 +107,7 @@ public class SkinsPage : UserControl, IRefreshable
         // --- Panneau de droite (preview + actions) ---
         var previewHost = new Panel
         {
-            Width = 280,
+            Width = 360,
             Dock = DockStyle.Right,
             BackColor = Theme.Card,
             Padding = new Padding(8)
@@ -121,8 +121,9 @@ public class SkinsPage : UserControl, IRefreshable
         var btnPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 140,
-            FlowDirection = FlowDirection.LeftToRight,
+            Height = 90,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
             BackColor = Color.Transparent,
             Padding = new Padding(4, 8, 4, 4)
         };
@@ -131,21 +132,23 @@ public class SkinsPage : UserControl, IRefreshable
         importBtn.Click += (_, _) => ImportSkins();
         btnPanel.Controls.Add(importBtn);
 
-        var importMultiBtn = MakeActionBtn("📁 Importer plusieurs", "📁 Batch import");
+        var row1 = new FlowLayoutPanel { Height = 36, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
+        var importMultiBtn = MakeActionBtn("📁 Plusieurs", "📁 Batch import");
         importMultiBtn.Click += (_, _) => ImportSkinsMulti();
-        btnPanel.Controls.Add(importMultiBtn);
-
+        row1.Controls.Add(importMultiBtn);
         var exportBtn = MakeActionBtn("📤 Exporter", "📤 Export");
         exportBtn.Click += (_, _) => ExportSelectedSkin();
-        btnPanel.Controls.Add(exportBtn);
+        row1.Controls.Add(exportBtn);
+        btnPanel.Controls.Add(row1);
 
-        applyBtn = MakeActionBtn("✓ Appliquer ce skin", "✓ Apply skin", primary: true);
+        var row2 = new FlowLayoutPanel { Height = 36, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
+        applyBtn = MakeActionBtn("✓ Appliquer", "✓ Apply", primary: true);
         applyBtn.Click += (_, _) => ApplySelectedSkin();
-        btnPanel.Controls.Add(applyBtn);
-
+        row2.Controls.Add(applyBtn);
         var favBtn = MakeActionBtn("❤ Favori", "❤ Favorite");
         favBtn.Click += (_, _) => ToggleFavorite();
-        btnPanel.Controls.Add(favBtn);
+        row2.Controls.Add(favBtn);
+        btnPanel.Controls.Add(row2);
 
         // Status
         statusLabel = new Label
@@ -181,7 +184,7 @@ public class SkinsPage : UserControl, IRefreshable
 
         Resize += (_, _) =>
         {
-            previewHost.Width = Math.Min(280, Math.Max(220, Width / 3));
+            previewHost.Width = Math.Min(400, Math.Max(300, Width / 3));
         };
 
         LoadFavorites();

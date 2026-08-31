@@ -16,14 +16,10 @@ public class ServersPage : UserControl, IRefreshable
     private readonly TextBox addressBox = new();
     private readonly FlowLayoutPanel cityList = new();
     private string? _selectedCityId;
-    private readonly FlowLayoutPanel hostedList = new();
-    private readonly TextBox hostNameBox = new();
-    private readonly ComboBox hostVersionCombo = new();
-    private readonly Label createStatus = new();
+    private FlowLayoutPanel? _hostedList;
     private string? _selectedAddress;
-    private bool _versionsLoaded;
-    private readonly Dictionary<string, string> _statusOverride = new();
     private readonly Dictionary<string, Label> _statusLabels = new();
+    private List<PterodactylApi.PtServer> _vpsServers = new();
 
     public ServersPage()
     {
@@ -54,154 +50,81 @@ public class ServersPage : UserControl, IRefreshable
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         };
 
-        // ================= ONGLET 1 : MES SERVEURS HÉBERGÉS =================
+        // ================= ONGLET 1 : MES SERVEURS (PTERODACTYL) =================
 
         var hostedPage = new TabPage("Mes serveurs") { BackColor = Theme.Bg };
-        var hostedRoot = new Panel
+
+        // --- Barre de boutons ---
+        var btnBar = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = ControlPaint.Dark(Theme.Card, 0.02f), Padding = new Padding(12, 6, 0, 0) };
+
+        var openPanelBtn = new Button
         {
-            Dock = DockStyle.Fill,
-            AutoScroll = true,
-            BackColor = Theme.Bg,
-            Padding = new Padding(24, 16, 24, 16)
+            Text = Lang.T("🌐 Ouvrir le panel", "🌐 Open panel"),
+            Height = 32, AutoSize = true, FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            ForeColor = Theme.Accent, BackColor = Color.Transparent, Cursor = Cursors.Hand
         };
-
-        hostedRoot.Controls.Add(new Label
+        openPanelBtn.FlatAppearance.BorderSize = 0;
+        openPanelBtn.Location = new Point(12, 6);
+        openPanelBtn.Click += (_, _) =>
         {
-            Text = Lang.T(
-                "Crée et héberge tes propres serveurs Minecraft depuis le launcher.\n" +
-                "Le launcher télécharge le serveur officiel, tu importes ta map, tu partages l'adresse à tes amis !",
-                "Create and host your own Minecraft servers from the launcher.\n" +
-                "The launcher downloads the official server, you import your map, share the address with your friends!"),
-            ForeColor = Theme.TextDim, AutoSize = true
-        });
-
-        // ---- ligne de création ----
-        var createRow = new Panel { Height = 52, Width = 920, Margin = new Padding(0, 12, 0, 0) };
-
-        hostNameBox.SetBounds(0, 8, 240, 32);
-        hostNameBox.Font = new Font("Segoe UI", 10f);
-        hostNameBox.BorderStyle = BorderStyle.FixedSingle;
-        hostNameBox.BackColor = Theme.Card;
-        hostNameBox.ForeColor = Theme.Text;
-        hostNameBox.PlaceholderText = Lang.T("Nom du serveur", "Server name");
-
-        hostVersionCombo.SetBounds(250, 8, 150, 32);
-        hostVersionCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-        hostVersionCombo.FlatStyle = FlatStyle.Flat;
-        hostVersionCombo.Font = new Font("Consolas", 10f);
-        hostVersionCombo.BackColor = Theme.Card;
-        hostVersionCombo.ForeColor = Theme.Text;
-
-        var loaderCombo = new ComboBox
-        {
-            Location = new Point(410, 8), Size = new Size(120, 32),
-            DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI", 10f),
-            BackColor = Theme.Card, ForeColor = Theme.Text
-        };
-        loaderCombo.Items.AddRange(new object[] { "Vanilla", "Fabric", "Forge", "NeoForge" });
-        loaderCombo.SelectedIndex = 0;
-
-        var rpChk = new CheckBox
-        {
-            Text = Lang.T("🏘 Ville RP", "🏘 RP city"),
-            Location = new Point(540, 12), Size = new Size(130, 24),
-            ForeColor = Theme.TextDim, AutoSize = true,
-            Font = new Font("Segoe UI", 9f)
-        };
-
-        var templateCombo = new ComboBox
-        {
-            Location = new Point(540, 8), Size = new Size(130, 32),
-            DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI", 9f),
-            BackColor = Theme.Card, ForeColor = Theme.Text
-        };
-        templateCombo.Items.AddRange(new object[] {
-            "Aucun template",
-            "🏠 Survival",
-            "🎨 Creative",
-            "🏝 SkyBlock",
-            "🏘 Ville RP",
-            "⚔️ PvP",
-            "🎯 Minigames"
-        });
-        templateCombo.SelectedIndex = 0;
-        templateCombo.SelectedIndexChanged += (_, _) =>
-        {
-            // Ajuster les options selon le template sélectionné
-            string template = templateCombo.SelectedItem?.ToString() ?? "";
-            if (template.Contains("Creative"))
+            string url = DataStore.Settings.VpsUrl.Trim();
+            if (string.IsNullOrWhiteSpace(url))
             {
-                rpChk.Checked = false;
+                MessageBox.Show(
+                    Lang.T("Configure l'URL du panel Pterodactyl dans les paramètres.", "Configure the Pterodactyl panel URL in settings."),
+                    "Team Launcher");
+                return;
             }
-            else if (template.Contains("RP"))
-            {
-                rpChk.Checked = true;
-            }
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         };
 
-        var createBtn = MkBtn(Lang.T("+ Créer le serveur", "+ Create server"), primary: true, x: 680, w: 210);
-        createBtn.Click += async (_, _) => await CreateServerAsync(
-            loaderCombo.SelectedItem as string ?? "Vanilla", rpChk.Checked,
-            templateCombo.SelectedItem?.ToString() ?? "Aucun template");
-
-        createStatus.SetBounds(900, 14, 160, 26);
-        createStatus.ForeColor = Theme.TextDim;
-        createStatus.Font = new Font("Segoe UI", 9f);
-        createStatus.AutoSize = false;
-        createStatus.AutoEllipsis = true;
-
-        createRow.Controls.Add(hostNameBox);
-        createRow.Controls.Add(hostVersionCombo);
-        createRow.Controls.Add(loaderCombo);
-        createRow.Controls.Add(templateCombo);
-        createRow.Controls.Add(rpChk);
-        createRow.Controls.Add(createBtn);
-        createRow.Controls.Add(createStatus);
-
-        hostedList.FlowDirection = FlowDirection.TopDown;
-        hostedList.WrapContents = false;
-        hostedList.AutoScroll = true;
-        hostedList.BackColor = Theme.Bg;
-
-        hostedRoot.Controls.Add(hostedList);
-        hostedRoot.Resize += (_, _) =>
+        var refreshBtn = new Button
         {
-            var lbl = hostedRoot.Controls.Count > 0 ? hostedRoot.Controls[0] as Label : null;
-            if (lbl != null) { lbl.Location = new Point(0, 0); lbl.Width = hostedRoot.ClientSize.Width - 48; }
-            createRow.Location = new Point(0, 50);
-            createRow.Width = hostedRoot.ClientSize.Width - 48;
-            hostedList.Location = new Point(0, 110);
-            hostedList.Width = hostedRoot.ClientSize.Width - 48;
-            hostedList.Height = hostedRoot.ClientSize.Height - 120;
+            Text = Lang.T("🔄 Rafraîchir", "🔄 Refresh"),
+            Height = 32, AutoSize = true, FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = Theme.TextDim, BackColor = Color.Transparent, Cursor = Cursors.Hand
         };
-        hostedPage.Controls.Add(hostedRoot);
+        refreshBtn.FlatAppearance.BorderSize = 0;
+        refreshBtn.Location = new Point(220, 6);
+        refreshBtn.Click += async (_, _) => await LoadVpsServersAsync();
+
+        btnBar.Controls.AddRange(new Control[] { openPanelBtn, refreshBtn });
+
+        // --- Liste des serveurs VPS ---
+        _hostedList = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
+            WrapContents = false, AutoScroll = true, BackColor = Theme.Bg,
+            Padding = new Padding(12, 8, 12, 12)
+        };
+
+        hostedPage.Controls.Add(_hostedList);
+        hostedPage.Controls.Add(btnBar);
 
         // ================= ONGLET 2 : SERVEURS FAVORIS =================
 
         var favPage = new TabPage("Favoris") { BackColor = Theme.Bg };
-        var favRoot = new Panel
+        var favPanel = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            AutoScroll = true,
-            BackColor = Theme.Bg,
-            Padding = new Padding(24, 16, 24, 16)
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3,
+            BackColor = Theme.Bg, Padding = new Padding(24, 12, 24, 8)
         };
+        favPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        favPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        favPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        favPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        favRoot.Controls.Add(new Label
+        favPanel.Controls.Add(new Label
         {
             Text = Lang.T(
-                "Tes serveurs favoris : statut en direct, joueurs connectés, MOTD. Double-clic sur un serveur = rejoindre.",
-                "Your favorite servers: live status, connected players, MOTD. Double-click a server to join."),
-            ForeColor = Theme.TextDim, AutoSize = true
-        });
+                "Tes serveurs favoris : statut en direct, joueurs connectés, MOTD. Double-clic pour rejoindre.",
+                "Your favorite servers: live status, connected players, MOTD. Double-click to join."),
+            ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 0, 0, 8)
+        }, 0, 0);
 
-        serverList.FlowDirection = FlowDirection.TopDown;
-        serverList.WrapContents = false;
-        serverList.AutoScroll = true;
-        serverList.BackColor = Theme.Bg;
-        var btnRow = new Panel { Height = 52 };
+        var btnRow = new Panel { Height = 52, Dock = DockStyle.Top, Margin = new Padding(0, 0, 0, 8) };
         addressBox.SetBounds(0, 8, 360, 32);
         addressBox.Font = new Font("Consolas", 10f);
         addressBox.BorderStyle = BorderStyle.FixedSingle;
@@ -224,53 +147,46 @@ public class ServersPage : UserControl, IRefreshable
             DataStore.Save();
             RefreshData();
         };
-        var refreshBtn = MkBtn("Actualiser", primary: false, x: 666, w: 160);
-        refreshBtn.Click += async (_, _) => await PingAllAsync();
+        var favRefreshBtn = MkBtn("Actualiser", primary: false, x: 666, w: 160);
+        favRefreshBtn.Click += async (_, _) => await PingAllAsync();
 
         btnRow.Controls.Add(addressBox);
         btnRow.Controls.Add(addBtn);
         btnRow.Controls.Add(delBtn);
-        btnRow.Controls.Add(refreshBtn);
+        btnRow.Controls.Add(favRefreshBtn);
 
-        favRoot.Controls.Add(btnRow);
-        favRoot.Controls.Add(serverList);
-        favRoot.Resize += (_, _) =>
-        {
-            var lbl = favRoot.Controls.Count > 0 ? favRoot.Controls[0] as Label : null;
-            if (lbl != null) { lbl.Location = new Point(0, 0); lbl.Width = favRoot.ClientSize.Width - 48; }
-            btnRow.Location = new Point(0, 40);
-            btnRow.Width = favRoot.ClientSize.Width - 48;
-            serverList.Location = new Point(0, 96);
-            serverList.Width = favRoot.ClientSize.Width - 48;
-            serverList.Height = favRoot.ClientSize.Height - 106;
-        };
-        favPage.Controls.Add(favRoot);
+        favPanel.Controls.Add(btnRow, 0, 1);
+
+        serverList.FlowDirection = FlowDirection.TopDown;
+        serverList.WrapContents = false;
+        serverList.AutoScroll = true;
+        serverList.BackColor = Theme.Bg;
+
+        favPanel.Controls.Add(serverList, 0, 2);
+        favPage.Controls.Add(favPanel);
 
         // ================= ONGLET 3 : VILLES DE LA TEAM =================
 
         var cityPage = new TabPage("Villes de la team") { BackColor = Theme.Bg };
-        var cityRoot = new Panel
+        var cityPanel = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            AutoScroll = true,
-            BackColor = Theme.Bg,
-            Padding = new Padding(24, 16, 24, 16)
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3,
+            BackColor = Theme.Bg, Padding = new Padding(24, 12, 24, 8)
         };
+        cityPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        cityPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        cityPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        cityPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        cityRoot.Controls.Add(new Label
+        cityPanel.Controls.Add(new Label
         {
             Text = Lang.T(
-                "Les villes RP des membres. Chacun ajoute sa ville ici, puis la partage d'un clic (le destinataire l'importe depuis le presse-papiers). Double-clic sur une ville = rejoindre.",
-                "Members' RP cities. Everyone adds their city here, then shares it in one click (the recipient imports it from the clipboard). Double-click a city to join."),
-            ForeColor = Theme.TextDim, AutoSize = true
-        });
+                "Les villes RP des membres. Ajoute ta ville, partage-la d'un clic. Double-clic pour rejoindre.",
+                "Members' RP cities. Add your city, share it in one click. Double-click to join."),
+            ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 0, 0, 8)
+        }, 0, 0);
 
-        cityList.FlowDirection = FlowDirection.TopDown;
-        cityList.WrapContents = false;
-        cityList.AutoScroll = true;
-        cityList.BackColor = Theme.Bg;
-
-        var cityBtnRow = new Panel { Height = 52 };
+        var cityBtnRow = new Panel { Height = 52, Dock = DockStyle.Top, Margin = new Padding(0, 0, 0, 8) };
         var addCityBtn = MkBtn("+ Ajouter ma ville", primary: true, x: 0, w: 200);
         addCityBtn.Click += (_, _) => EditCity(null);
         var editCityBtn = MkBtn("Modifier", primary: false, x: 208, w: 130);
@@ -300,26 +216,21 @@ public class ServersPage : UserControl, IRefreshable
         cityBtnRow.Controls.Add(importCityBtn);
         cityBtnRow.Controls.Add(delCityBtn);
 
-        cityRoot.Controls.Add(cityBtnRow);
-        cityRoot.Controls.Add(cityList);
-        cityRoot.Resize += (_, _) =>
-        {
-            var lbl = cityRoot.Controls.Count > 0 ? cityRoot.Controls[0] as Label : null;
-            if (lbl != null) { lbl.Location = new Point(0, 0); lbl.Width = cityRoot.ClientSize.Width - 48; }
-            cityBtnRow.Location = new Point(0, 40);
-            cityBtnRow.Width = cityRoot.ClientSize.Width - 48;
-            cityList.Location = new Point(0, 96);
-            cityList.Width = cityRoot.ClientSize.Width - 48;
-            cityList.Height = cityRoot.ClientSize.Height - 106;
-        };
-        cityPage.Controls.Add(cityRoot);
+        cityPanel.Controls.Add(cityBtnRow, 0, 1);
+
+        cityList.FlowDirection = FlowDirection.TopDown;
+        cityList.WrapContents = false;
+        cityList.AutoScroll = true;
+        cityList.BackColor = Theme.Bg;
+
+        cityPanel.Controls.Add(cityList, 0, 2);
+        cityPage.Controls.Add(cityPanel);
 
         tabs.TabPages.AddRange(new[] { hostedPage, favPage, cityPage });
         Controls.Add(tabs);
 
         ServerHost.StateChanged += OnHostStateChanged;
         ServerHost.DownloadProgress += OnDownloadProgress;
-        // l'agent playit a annoncé une adresse publique : on la mémorise sur le serveur
         ServerHost.TunnelAddressFound += (id, address) =>
         {
             var hs = DataStore.Settings.HostedServers.FirstOrDefault(h => h.Id == id);
@@ -331,7 +242,6 @@ public class ServersPage : UserControl, IRefreshable
                 $"Public address: {address} 🎉"));
             if (IsHandleCreated) BeginInvoke(RefreshData);
         };
-        _ = LoadVersionsAsync();
     }
 
     private void OnDownloadProgress(string id, int pct)
@@ -354,558 +264,217 @@ public class ServersPage : UserControl, IRefreshable
         BeginInvoke(() => RefreshData());
     }
 
-    private async Task LoadVersionsAsync()
-    {
-        try
-        {
-            var versions = await MojangApi.GetReleasesAsync();
-            hostVersionCombo.Items.Clear();
-            foreach (var v in versions.Take(60)) hostVersionCombo.Items.Add(v);
-            if (hostVersionCombo.Items.Count > 0) hostVersionCombo.SelectedIndex = 0;
-            _versionsLoaded = true;
-        }
-        catch
-        {
-            createStatus.Text = Lang.T("Impossible de charger la liste des versions.", "Cannot load version list.");
-        }
-    }
+    // ---------------- serveurs VPS (Pterodactyl) ----------------
 
-    // ---------------- création & cartes hébergées ----------------
-
-    private async Task CreateServerAsync(string loader, bool rpProfile, string template = "Aucun template")
+    private async Task LoadVpsServersAsync()
     {
-        string name = hostNameBox.Text.Trim();
-        if (name.Length == 0)
+        if (_hostedList == null) return;
+        _hostedList.SuspendLayout();
+        _hostedList.Controls.Clear();
+
+        if (!PterodactylApi.IsConfigured)
         {
-            MessageBox.Show(Lang.T("Donne un nom à ton serveur.", "Give your server a name."), "Team Launcher");
-            return;
-        }
-        if (!_versionsLoaded || hostVersionCombo.SelectedItem is not string version)
-        {
-            MessageBox.Show(
-                Lang.T(
-                    "La liste des versions n'est pas encore chargée, réessaie dans un instant.",
-                    "The version list hasn't loaded yet, try again in a moment."),
-                "Team Launcher");
+            _hostedList.Controls.Add(new Label
+            {
+                Text = Lang.T(
+                    "Aucun VPS configuré.\n\n" +
+                    "1. Installe Pterodactyl sur ton VPS\n" +
+                    "2. Génère une clé API Client\n" +
+                    "3. Configure dans Paramètres → VPS / Pterodactyl",
+                    "No VPS configured.\n\n" +
+                    "1. Install Pterodactyl on your VPS\n" +
+                    "2. Generate a Client API key\n" +
+                    "3. Configure in Settings → VPS / Pterodactyl"),
+                ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(6, 10, 0, 0)
+            });
+            _hostedList.ResumeLayout();
             return;
         }
 
-        int port = 25565;
-        while (DataStore.Settings.HostedServers.Any(h => h.Port == port)) port++;
-
-        var hs = new HostedServer
+        _hostedList.Controls.Add(new Label
         {
-            Name = name, McVersion = version, Loader = loader, Port = port, Motd = name,
-            RpProfile = rpProfile
-        };
+            Text = Lang.T("Chargement des serveurs…", "Loading servers…"),
+            ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(6, 10, 0, 0)
+        });
 
-        // Appliquer les paramètres du template
-        ApplyTemplate(hs, template);
-
-        DataStore.Settings.HostedServers.Add(hs);
-        DataStore.Save();
-        hostNameBox.Text = "";
-        _statusOverride[hs.Id] = Lang.T("⬇ Téléchargement du serveur…", "⬇ Downloading server…");
-        RefreshData();
-
+        _hostedList.ResumeLayout();
         try
         {
-            createStatus.Text = Lang.T(
-                $"Téléchargement du serveur Minecraft {version}…",
-                $"Downloading Minecraft {version} server…");
-            await Task.Run(() => ServerHost.DownloadAsync(hs));
-            _statusOverride.Remove(hs.Id);
-            createStatus.Text = "";
-            RefreshData();
-            MessageBox.Show(
-                Lang.T(
-                    $"Serveur « {name} » ({version}) créé !\n\n" +
-                    "Clique sur ▶ Démarrer pour le lancer, puis partage l'adresse\n" +
-                    "affichée dans la console avec tes amis.",
-                    $"Server \"{name}\" ({version}) created!\n\n" +
-                    "Click ▶ Start to launch it, then share the address\n" +
-                    "shown in the console with your friends."),
-                "Team Launcher");
+            _vpsServers = await PterodactylApi.ListServersAsync();
         }
         catch (Exception ex)
         {
-            _statusOverride.Remove(hs.Id);
-            _statusOverride[hs.Id] = Lang.T("✘ Échec du téléchargement", "✘ Download failed");
-            RefreshData();
-            MessageBox.Show(
-                Lang.T("Échec du téléchargement du serveur :\n", "Server download failed:\n") + ex.Message,
-                "Team Launcher");
+            _hostedList.SuspendLayout();
+            _hostedList.Controls.Clear();
+            _hostedList.Controls.Add(new Label
+            {
+                Text = Lang.T("Erreur de connexion au panel :\n", "Panel connection error:\n") + ex.Message,
+                ForeColor = Color.FromArgb(220, 80, 80), AutoSize = true, Margin = new Padding(6, 10, 0, 0)
+            });
+            _hostedList.ResumeLayout();
+            return;
         }
-    }
 
-    private static void ApplyTemplate(HostedServer s, string template)
-    {
-        switch (template)
+        _hostedList.SuspendLayout();
+        _hostedList.Controls.Clear();
+
+        if (_vpsServers.Count == 0)
         {
-            case "🏠 Survival":
-                s.Motd = "§a" + s.Name + " §7— Survival";
-                break;
-            case "🎨 Creative":
-                s.Motd = "§b" + s.Name + " §7— Creative";
-                s.RpProfile = false;
-                break;
-            case "🏝 SkyBlock":
-                s.Motd = "§e" + s.Name + " §7— SkyBlock";
-                break;
-            case "🏘 Ville RP":
-                s.Motd = "§6" + s.Name + " §7— Ville RP";
-                s.RpProfile = true;
-                s.WhitelistEnabled = true;
-                break;
-            case "⚔️ PvP":
-                s.Motd = "§c" + s.Name + " §7— PvP";
-                break;
-            case "🎯 Minigames":
-                s.Motd = "§d" + s.Name + " §7— Minigames";
-                break;
+            _hostedList.Controls.Add(new Label
+            {
+                Text = Lang.T(
+                    "Aucun serveur trouvé sur le panel.\nCrée un serveur depuis le panel Pterodactyl.",
+                    "No servers found on the panel.\nCreate a server from the Pterodactyl panel."),
+                ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(6, 10, 0, 0)
+            });
         }
+        else
+        {
+            foreach (var srv in _vpsServers)
+                _hostedList.Controls.Add(MakeVpsServerCard(srv));
+        }
+
+        _hostedList.ResumeLayout();
     }
 
-    private Panel MakeHostedCard(HostedServer s)
+    private Panel MakeVpsServerCard(PterodactylApi.PtServer srv)
     {
-        bool running = ServerHost.IsRunning(s);
+        bool running = srv.Status == "running";
         var card = new Panel
         {
-            Height = 296,
+            Height = 80,
             Width = Math.Max(880, Parent?.Width ?? 900),
             BackColor = running ? ControlPaint.Dark(Theme.Accent, 0.55f) : Theme.Card,
             Margin = new Padding(0, 6, 14, 6)
         };
         Theme.Blockify(card);
 
-        // ================= en-tête de carte =================
-
-        var icon = new Label
-        {
-            Text = "", Font = new Font("Segoe UI Emoji", 16f),
-            Size = new Size(48, 48), Location = new Point(10, 10),
-            TextAlign = ContentAlignment.MiddleCenter
-        };
-
         var nameLbl = new Label
         {
-            Text = s.Name,
+            Text = srv.Name,
             ForeColor = Theme.Text,
-            Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
-            Location = new Point(64, 8), AutoSize = true
+            Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+            Location = new Point(14, 8), AutoSize = true
         };
 
-        string addr = $"{ServerHost.GetLocalIp()}:{s.Port}";
         var info = new Label
         {
             Text = running
-                ? $"● EN LIGNE  •  {s.Loader} {s.McVersion}  •  adresse à partager : {addr}"
-                : $"○ Arrêté  •  {s.Loader} {s.McVersion}  •  port {s.Port}",
+                ? $"● EN LIGNE  •  Node: {srv.Node}"
+                : $"○ {srv.Status}",
             ForeColor = running ? Theme.Accent : Theme.TextDim,
             Font = new Font("Segoe UI", 9f),
-            Location = new Point(64, 32), AutoSize = true
+            Location = new Point(14, 30), AutoSize = true
         };
 
-        var status = new Label
+        // Adresse du serveur (IP:port) — récupérée depuis les allocations
+        var addrLabel = new Label
         {
-            Text = _statusOverride.TryGetValue(s.Id, out var ov) ? ov : "",
-            ForeColor = Theme.TextDim,
-            Font = new Font("Segoe UI", 8.5f),
-            Location = new Point(64, 52), AutoSize = true
+            Text = Lang.T("Adresse : chargement…", "Address: loading…"),
+            ForeColor = Theme.Accent,
+            Font = new Font("Consolas", 9.5f),
+            Location = new Point(14, 50), AutoSize = true
         };
-        _statusLabels[s.Id] = status;
-        card.Disposed += (_, _) => { if (_statusLabels.TryGetValue(s.Id, out var l) && ReferenceEquals(l, status)) _statusLabels.Remove(s.Id); };
 
-        // ---- Monitoring CPU/RAM en temps réel ----
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var allocs = await PterodactylApi.GetAllocationsAsync(srv.Id);
+                if (allocs.Count > 0)
+                {
+                    var a = allocs[0];
+                    string addr = $"{a.Ip}:{a.Port}";
+                    card.BeginInvoke(() =>
+                    {
+                        if (card.IsDisposed) return;
+                        addrLabel.Text = $"🔗 {addr}";
+                    });
+                }
+                else
+                {
+                    card.BeginInvoke(() =>
+                    {
+                        if (card.IsDisposed) return;
+                        addrLabel.Text = Lang.T("⚠ Aucune allocation", "⚠ No allocation");
+                    });
+                }
+            }
+            catch
+            {
+                card.BeginInvoke(() =>
+                {
+                    if (card.IsDisposed) return;
+                    addrLabel.Text = Lang.T("⚠ Erreur de connexion", "⚠ Connection error");
+                });
+            }
+        });
+
+        // Monitoring CPU/RAM
         var monitorLabel = new Label
         {
             Text = "",
             ForeColor = Theme.Accent,
             Font = new Font("Consolas", 8.5f),
-            Location = new Point(64, 72), AutoSize = true
+            Location = new Point(350, 30), AutoSize = true
         };
+
         if (running)
         {
             var monitorTimer = new System.Windows.Forms.Timer { Interval = 5000 };
-            void UpdateMonitor(object? _, EventArgs __)
+            async void UpdateMonitor(object? _, EventArgs __)
             {
-                if (!ServerHost.IsRunning(s) || card.IsDisposed)
+                if (!running || card.IsDisposed)
                 {
                     monitorTimer.Stop();
                     monitorTimer.Dispose();
-                    monitorLabel.Text = "";
                     return;
                 }
                 try
                 {
-                    var process = System.Diagnostics.Process.GetProcessById(
-                        System.Diagnostics.Process.GetProcessesByName("java")
-                            .FirstOrDefault(p =>
-                            {
-                                try { return p.MainModule?.FileName?.Contains("javaw") == true; }
-                                catch { return false; }
-                            })?.Id ?? 0);
-                    if (process != null)
-                    {
-                        long ramMb = process.WorkingSet64 / 1024 / 1024;
-                        double cpu = process.TotalProcessorTime.TotalMilliseconds / (DateTime.Now - process.StartTime).TotalMilliseconds * 100;
-                        monitorLabel.Text = $"📊 RAM: {ramMb} Mo  •  CPU: {cpu:F1}%";
-                    }
+                    var state = await PterodactylApi.GetServerStateAsync(srv.Id);
+                    if (!card.IsDisposed)
+                        monitorLabel.Text = $"📊 CPU: {state.CpuPercent}%  •  RAM: {state.MemUsedBytes / 1024 / 1024} Mo";
                 }
-                catch { monitorLabel.Text = ""; }
+                catch { }
             }
             monitorTimer.Tick += UpdateMonitor;
             monitorTimer.Start();
             card.Disposed += (_, _) => { monitorTimer.Stop(); monitorTimer.Dispose(); };
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(1000);
-                if (!card.IsDisposed) card.BeginInvoke(() => UpdateMonitor(null!, EventArgs.Empty));
-            });
         }
 
-        var copyQuickBtn = MkBtn("⧉", primary: false, x: 0, w: 44);
-        copyQuickBtn.Location = new Point(card.Width - 142, 10);
-        copyQuickBtn.Click += (_, _) =>
+        // Boutons d'action
+        int btnX = card.Width - 46;
+
+        var panelBtn = MkBtn("🌐", primary: false, x: 0, w: 44);
+        panelBtn.Location = new Point(btnX, 10);
+        panelBtn.Click += (_, _) =>
         {
-            try
-            {
-                Clipboard.SetText(addr);
-                copyQuickBtn.Text = "✓";
-                var restore = new System.Windows.Forms.Timer { Interval = 1800 };
-                restore.Tick += (_, _) =>
-                {
-                    copyQuickBtn.Text = "📋";
-                    restore.Stop();
-                    restore.Dispose();
-                };
-                restore.Start();
-            }
-            catch { }
+            string url = DataStore.Settings.VpsUrl.Trim();
+            if (!string.IsNullOrWhiteSpace(url))
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         };
 
-        var folderBtn = MkBtn("↗", primary: false, x: 0, w: 44);
-        folderBtn.Location = new Point(card.Width - 94, 10);
-        folderBtn.Click += (_, _) =>
-        {
-            try
-            {
-                System.Diagnostics.Process.Start(new ProcessStartInfo(ServerHost.Dir(s))
-                { UseShellExecute = true });
-            }
-            catch { }
-        };
-
-        var delBtn = MkBtn("✕", primary: false, x: 0, w: 44);
-        delBtn.Location = new Point(card.Width - 46, 10);
-        delBtn.Click += (_, _) => DeleteHosted(s);
-
-        // ---- statut joueurs en direct (serveur en ligne uniquement) ----
-        if (running)
-        {
-            string addrCopy = addr;
-            var infoRef = info;
-            _ = Task.Run(async () =>
-            {
-                ServerPing.Status? st = null;
-                try { st = await ServerPing.QueryAsync("127.0.0.1:" + s.Port); } catch { }
-                if (st == null) return;
-                card.BeginInvoke(() =>
-                {
-                    if (card.IsDisposed || infoRef.IsDisposed || !ServerHost.IsRunning(s)) return;
-                    infoRef.Text = Lang.T(
-                        $"● EN LIGNE  •  {s.Loader} {s.McVersion}  •  👥 {st.Online}/{st.Max} joueurs  •  adresse : {addrCopy}",
-                        $"● ONLINE  •  {s.Loader} {s.McVersion}  •  👥 {st.Online}/{st.Max} players  •  address: {addrCopy}");
-                });
-            });
-        }
-
-        // ================= onglets =================
-
-        var tabs = new TabControl
-        {
-            Location = new Point(8, 68),
-            Size = new Size(card.Width - 16, 220),
-            Font = new Font("Segoe UI", 8.25f),
-            DrawMode = TabDrawMode.OwnerDrawFixed,
-            ItemSize = new Size(92, 24)
-        };
-        tabs.DrawItem += (_, e) =>
-        {
-            bool sel = tabs.SelectedIndex == e.Index;
-            using (var b = new SolidBrush(sel ? Theme.Card : Theme.Panel))
-                e.Graphics.FillRectangle(b, e.Bounds);
-            TextRenderer.DrawText(e.Graphics, tabs.TabPages[e.Index].Text,
-                new Font("Segoe UI", 8.25f), e.Bounds,
-                sel ? Theme.Text : Theme.TextDim,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        };
-
-        // ---------------- onglet Démarrer ----------------
-
-        var startPage = new TabPage("Démarrer") { BackColor = Theme.Bg };
-
-        var startBtn = MkBtn(running
-            ? Lang.T("Arrêter le serveur", "Stop server")
-            : Lang.T("Démarrer le serveur", "Start server"),
-            primary: true, x: 16, w: 210);
-        startBtn.Location = new Point(16, 18);
-        startBtn.Height = 42;
-        startBtn.Click += async (_, _) => await ToggleStartStop(s);
-
-        var copyBtn = MkBtn(Lang.T($"Copier l'adresse ({addr})", $"Copy address ({addr})"),
-            primary: false, x: 236, w: 280);
-        copyBtn.Location = new Point(236, 18);
-        copyBtn.Height = 42;
-        copyBtn.ForeColor = Theme.Accent;
-        string shareAddr = string.IsNullOrEmpty(s.PublicAddress) ? addr : s.PublicAddress;
-        if (!string.IsNullOrEmpty(s.PublicAddress))
-            copyBtn.Text = Lang.T($"🌍 Copier l'adresse publique ({s.PublicAddress})",
-                $"🌍 Copy public address ({s.PublicAddress})");
+        var copyBtn = MkBtn("📋", primary: false, x: 0, w: 44);
+        copyBtn.Location = new Point(btnX - 50, 10);
         copyBtn.Click += (_, _) =>
         {
             try
             {
-                Clipboard.SetText(shareAddr);
-                copyBtn.Text = Lang.T("✓ Adresse copiée !", "✓ Address copied!");
-                var restore = new System.Windows.Forms.Timer { Interval = 1800 };
-                restore.Tick += (_, _) =>
+                string addrText = addrLabel.Text.Replace("🔗 ", "").Trim();
+                if (!addrText.Contains("Erreur") && !addrText.Contains("chargement") && !addrText.Contains("allocation"))
                 {
-                    copyBtn.Text = string.IsNullOrEmpty(s.PublicAddress)
-                        ? Lang.T($"Copier l'adresse ({addr})", $"Copy address ({addr})")
-                        : Lang.T($"🌍 Copier l'adresse publique ({s.PublicAddress})",
-                            $"🌍 Copy public address ({s.PublicAddress})");
-                    restore.Stop();
-                    restore.Dispose();
-                };
-                restore.Start();
+                    Clipboard.SetText(addrText);
+                    copyBtn.Text = "✓";
+                    var restore = new System.Windows.Forms.Timer { Interval = 1800 };
+                    restore.Tick += (_, _) => { copyBtn.Text = "📋"; restore.Stop(); restore.Dispose(); };
+                    restore.Start();
+                }
             }
             catch { }
         };
 
-        var startHint = new Label
-        {
-            Text = running
-                ? Lang.T(
-                    "Le serveur tourne ! Donne l'adresse ci-dessus à tes amis (même réseau).",
-                    "The server is running! Share the address above with your friends (same network).")
-                : Lang.T(
-                    "Démarre le serveur puis partage l'adresse à tes amis.\n" +
-                    "Pour jouer hors de ton réseau : onglet Réglages → Ouvrir sur Internet.",
-                    "Start the server then share the address with your friends.\n" +
-                    "To play outside your network: Settings tab → Open to Internet."),
-            ForeColor = Theme.TextDim, Font = new Font("Segoe UI", 9f),
-            Location = new Point(16, 72), AutoSize = true
-        };
-
-        startPage.Controls.AddRange(new Control[] { startBtn, copyBtn, startHint });
-
-        // ---------------- onglet Console ----------------
-
-        var consolePage = new TabPage("Console") { BackColor = Theme.Bg, Padding = new Padding(8) };
-
-        var log = new TextBox
-        {
-            Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical,
-            Dock = DockStyle.Fill, BackColor = Color.FromArgb(12, 14, 10), ForeColor = Theme.Text,
-            BorderStyle = BorderStyle.FixedSingle,
-            Font = new Font("Consolas", 9f)
-        };
-        try
-        {
-            string logFile = Path.Combine(ServerHost.Dir(s), "console.log");
-            if (File.Exists(logFile))
-            {
-                log.Text = File.ReadAllText(logFile);
-                log.SelectionStart = log.TextLength;
-                log.ScrollToCaret();
-            }
-        }
-        catch { }
-
-        var cmdRow = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Bottom, Height = 44, WrapContents = false, Padding = new Padding(0, 6, 0, 0)
-        };
-        var cmdBox = new TextBox { Width = 300, Font = new Font("Consolas", 10f) };
-        cmdBox.PlaceholderText = Lang.T(
-            "Commande : list, say Bonjour, whitelist add Pseudo…",
-            "Command: list, say Hello, whitelist add Name…");
-        void SendCmd(string c)
-        {
-            c = c.Trim();
-            if (c.Length == 0) return;
-            ServerHost.SendCommand(s.Id, c);
-            cmdBox.Text = "";
-        }
-        var sendBtn = new Button {             Text = Lang.T("Envoyer", "Send"), Width = 84, Height = 32 };
-        Theme.Apply(sendBtn, primary: true);
-        sendBtn.Click += (_, _) => SendCmd(cmdBox.Text);
-        cmdBox.KeyPress += (_, e) =>
-        {
-            if (e.KeyChar == (char)13) { SendCmd(cmdBox.Text); e.Handled = true; }
-        };
-        Button Quick(string c) => new()
-        {
-            Text = c, Width = 90, Height = 32, Margin = new Padding(4, 1, 0, 0)
-        };
-        var qList = Quick("list");
-        Theme.Apply(qList);
-        qList.Click += (_, _) => SendCmd("list");
-        var qSave = Quick("save-all");
-        Theme.Apply(qSave);
-        qSave.Click += (_, _) => SendCmd("save-all");
-
-        // ---- actions whitelist / OP façon ville RP ----
-        void SendToPlayer(string action, string label) =>
-            ServerHost.SendCommand(s.Id, $"{action} {label}");
-        var qWlAdd = Quick("+ Whitelist");
-        Theme.Apply(qWlAdd);
-        qWlAdd.Click += (_, _) =>
-        {
-            string? p = PromptText(Lang.T("Whitelist", "Whitelist"),
-                Lang.T("Pseudo à autoriser sur le serveur :", "Player name to allow on the server:"));
-            if (!string.IsNullOrWhiteSpace(p)) SendToPlayer("whitelist add", p);
-        };
-        var qWlDel = Quick("- Whitelist");
-        Theme.Apply(qWlDel);
-        qWlDel.Click += (_, _) =>
-        {
-            string? p = PromptText(Lang.T("Whitelist", "Whitelist"),
-                Lang.T("Pseudo à retirer du serveur :", "Player name to remove from the server:"));
-            if (!string.IsNullOrWhiteSpace(p)) SendToPlayer("whitelist remove", p);
-        };
-        var qOp = Quick("OP");
-        Theme.Apply(qOp);
-        qOp.Click += (_, _) =>
-        {
-            string? p = PromptText("OP",
-                Lang.T("Pseudo à promouvoir opérateur :", "Player name to promote as operator:"));
-            if (!string.IsNullOrWhiteSpace(p)) SendToPlayer("op", p);
-        };
-
-        cmdRow.Controls.Add(cmdBox);
-        cmdRow.Controls.Add(sendBtn);
-        cmdRow.Controls.Add(qList);
-        cmdRow.Controls.Add(qSave);
-        cmdRow.Controls.Add(qWlAdd);
-        cmdRow.Controls.Add(qWlDel);
-        cmdRow.Controls.Add(qOp);
-
-        consolePage.Controls.Add(log);
-        consolePage.Controls.Add(cmdRow);
-
-        void OnLine(string id, string line)
-        {
-            if (id != s.Id) return;
-            try
-            {
-                card.BeginInvoke(() =>
-                {
-                    if (card.IsDisposed || log.IsDisposed) return;
-                    log.AppendText(line + Environment.NewLine);
-                    if (log.Lines.Length > 800)
-                        log.Lines = log.Lines[^500..];
-                });
-            }
-            catch { }
-        }
-        ServerHost.LogEmitted += OnLine;
-        card.Disposed += (_, _) => ServerHost.LogEmitted -= OnLine;
-
-        // ---------------- onglet Map & Mods ----------------
-
-        var contentPage = new TabPage("Map & mods") { BackColor = Theme.Bg };
-
-        var mapBtn = MkBtn("Importer une map", primary: false, x: 16, w: 200);
-        mapBtn.Location = new Point(16, 18);
-        mapBtn.Height = 42;
-        mapBtn.Click += (_, _) => ImportMap(s);
-
-        var modsBtn = MkBtn("Gérer les mods", primary: false, x: 226, w: 170);
-        modsBtn.Location = new Point(226, 18);
-        modsBtn.Height = 42;
-        modsBtn.Click += (_, _) => ShowModsDialog(s);
-
-        var modpackBtn = MkBtn("📦 Installer un modpack", primary: false, x: 406, w: 200);
-        modpackBtn.Location = new Point(406, 18);
-        modpackBtn.Height = 42;
-        modpackBtn.ForeColor = Theme.Accent;
-        modpackBtn.Click += async (_, _) => await InstallModpackOnServerAsync(s);
-
-        var worldLibBtn = MkBtn("📚 Bibliothèque de mondes", primary: false, x: 616, w: 200);
-        worldLibBtn.Location = new Point(616, 18);
-        worldLibBtn.Height = 42;
-        worldLibBtn.Click += (_, _) => ShowWorldLibrary(s);
-
-        var contentHint = new Label
-        {
-            Text = Lang.T(
-                "L'import remplace le monde actuel (l'ancien est sauvegardé dans le dossier du serveur).\n" +
-                "Les mods (.jar) s'activent au prochain démarrage — nécessite Fabric, Forge ou NeoForge.\n" +
-                "Un modpack CurseForge/Modrinch peut être installé directement sur le serveur.\n" +
-                "La bibliothèque de mondes permet de sauvegarder/charger des mondes entre serveurs.",
-                "Importing replaces the current world (the old one is backed up in the server folder).\n" +
-                "Mods (.jar) are loaded on next start — requires Fabric, Forge or NeoForge.\n" +
-                "A CurseForge/Modrinth modpack can be installed directly on the server.\n" +
-                "The world library lets you save/load worlds between servers."),
-            ForeColor = Theme.TextDim, Font = new Font("Segoe UI", 9f),
-            Location = new Point(16, 72), AutoSize = true
-        };
-
-        contentPage.Controls.AddRange(new Control[] { mapBtn, modsBtn, modpackBtn, worldLibBtn, contentHint });
-
-        // ---------------- onglet Réglages ----------------
-
-        var settingsPage = new TabPage("Réglages") { BackColor = Theme.Bg };
-
-        var configBtn = MkBtn("server.properties…", primary: false, x: 16, w: 210);
-        configBtn.Location = new Point(16, 18);
-        configBtn.Height = 42;
-        configBtn.Click += (_, _) => ShowConfigDialog(s);
-
-        var iconBtn = MkBtn("Icône…", primary: false, x: 236, w: 150);
-        iconBtn.Location = new Point(236, 18);
-        iconBtn.Height = 42;
-        iconBtn.Click += (_, _) => SetServerIcon(s);
-
-        var tunnelBtn = MkBtn("Ouvrir sur Internet", primary: false, x: 396, w: 200);
-        tunnelBtn.Location = new Point(436, 18);
-        tunnelBtn.Height = 42;
-        tunnelBtn.Click += (_, _) => _ = OpenToInternetAsync(s);
-
-        var playersBtn = MkBtn(Lang.T("Joueurs…", "Players…"), primary: false, x: 656, w: 180);
-        playersBtn.Location = new Point(656, 18);
-        playersBtn.Height = 42;
-        playersBtn.ForeColor = Theme.Accent;
-        playersBtn.Click += (_, _) =>
-        {
-            using var dlg = new ServerPlayersDialog(s);
-            dlg.ShowDialog(FindForm());
-            RefreshData();
-        };
-
-        var settingsHint = new Label
-        {
-            Text = Lang.T(
-                "Configuration du serveur (port, MOTD, difficulté, whitelist…), redémarrage auto,\n" +
-                "sauvegardes, icône et tunnel Internet playit.gg (adresse publique sans ouvrir les ports).",
-                "Server configuration (port, MOTD, difficulty, whitelist…), auto restart,\n" +
-                "backups, icon and the playit.gg Internet tunnel (public address, no port forwarding)."),
-            ForeColor = Theme.TextDim, Font = new Font("Segoe UI", 9f),
-            Location = new Point(16, 72), AutoSize = true
-        };
-
-        settingsPage.Controls.AddRange(new Control[] { configBtn, iconBtn, tunnelBtn, playersBtn, settingsHint });
-
-        // ---------------- assemblage ----------------
-
-        tabs.TabPages.AddRange(new[] { startPage, consolePage, contentPage, settingsPage });
-
-        card.Controls.AddRange(new Control[]
-        {
-            icon, nameLbl, info, status, monitorLabel, copyQuickBtn, folderBtn, delBtn, tabs
-        });
+        card.Controls.AddRange(new Control[] { nameLbl, info, addrLabel, monitorLabel, panelBtn, copyBtn });
         return card;
     }
 
@@ -945,6 +514,7 @@ public class ServersPage : UserControl, IRefreshable
             Text = s.RestartAt, Width = 90,
             Location = new Point(280, 30), Font = new Font("Consolas", 10f)
         };
+        Theme.ApplyInput(restartBox);
         var backupsBtn = new Button { Text = "Sauvegardes du monde…", Width = 240, Height = 38 };
         Theme.Apply(backupsBtn);
         backupsBtn.Location = new Point(4, 62);
@@ -980,6 +550,7 @@ public class ServersPage : UserControl, IRefreshable
             Font = new Font("Consolas", 9f),
             PlaceholderText = "https://discord.com/api/webhooks/..."
         };
+        Theme.ApplyInput(webhookBox);
         var webhookTestBtn = new Button { Text = "Tester", Width = 80, Height = 28 };
         Theme.Apply(webhookTestBtn);
         webhookTestBtn.Location = new Point(660, 96);
@@ -1149,6 +720,7 @@ public class ServersPage : UserControl, IRefreshable
             Location = new Point(16, 16),
             PlaceholderText = Lang.T("Rechercher un modpack sur Modrinth...", "Search for a modpack on Modrinth...")
         };
+        Theme.ApplyInput(searchBox);
 
         var searchBtn = new Button
         {
@@ -1710,10 +1282,8 @@ public class ServersPage : UserControl, IRefreshable
             }
             if (!ServerHost.IsInstalled(s))
             {
-                _statusOverride[s.Id] = Lang.T("⬇ Téléchargement du serveur…", "⬇ Downloading server…");
                 RefreshData();
                 await Task.Run(() => ServerHost.DownloadAsync(s));
-                _statusOverride.Remove(s.Id);
             }
             // backup auto du monde avant chaque session (anti-crash / anti-grief)
             try
@@ -1741,7 +1311,6 @@ public class ServersPage : UserControl, IRefreshable
         }
         catch (Exception ex)
         {
-            _statusOverride.Remove(s.Id);
             RefreshData();
             MessageBox.Show(
                 Lang.T("Impossible de démarrer le serveur :\n", "Could not start the server:\n") + ex.Message,
@@ -1864,28 +1433,38 @@ public class ServersPage : UserControl, IRefreshable
         return b;
     }
 
+    /// <summary>Ajoute un champ "Label + Control" dans le formulaire de création.</summary>
+    private static void AddCreateField(Control parent, string labelText, out TextBox box)
+    {
+        var lbl = new Label
+        {
+            Text = labelText, ForeColor = Theme.TextDim,
+            Font = new Font("Segoe UI", 9.5f), AutoSize = true,
+            Margin = new Padding(0, 12, 0, 4)
+        };
+        parent.Controls.Add(lbl);
+        box = new TextBox();
+        parent.Controls.Add(box);
+    }
+
+    /// <summary>Ajoute un champ "Label + Control (non-TextBox)" dans le formulaire de création.</summary>
+    private static void AddCreateFieldRaw(Control parent, string labelText, Control ctrl)
+    {
+        var lbl = new Label
+        {
+            Text = labelText, ForeColor = Theme.TextDim,
+            Font = new Font("Segoe UI", 9.5f), AutoSize = true,
+            Margin = new Padding(0, 12, 0, 4)
+        };
+        parent.Controls.Add(lbl);
+        ctrl.Margin = new Padding(0, 0, 0, 0);
+        parent.Controls.Add(ctrl);
+    }
+
     public void RefreshData()
     {
-        // ---- serveurs hébergés ----
-        hostedList.SuspendLayout();
-        hostedList.Controls.Clear();
-
-        if (DataStore.Settings.HostedServers.Count == 0)
-        {
-            hostedList.Controls.Add(new Label
-            {
-                Text = Lang.T(
-                    "Aucun serveur hébergé. Donne-lui un nom, choisis une version, clique sur Créer !",
-                    "No hosted server yet. Give it a name, pick a version, click Create!"),
-                ForeColor = Theme.TextDim, AutoSize = true,
-                Margin = new Padding(6, 10, 0, 0)
-            });
-        }
-
-        foreach (var hs in DataStore.Settings.HostedServers)
-            hostedList.Controls.Add(MakeHostedCard(hs));
-
-        hostedList.ResumeLayout();
+        // ---- serveurs VPS (Pterodactyl) ----
+        _ = LoadVpsServersAsync();
 
         // ---- favoris ----
         serverList.SuspendLayout();

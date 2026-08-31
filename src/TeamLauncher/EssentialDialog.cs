@@ -24,6 +24,7 @@ public class EssentialDialog : Form
             TextAlign = ContentAlignment.MiddleCenter
         };
 
+        Theme.ApplyInput(picker);
         picker.DropDownStyle = ComboBoxStyle.DropDownList;
         picker.Font = new Font("Segoe UI", 11f);
 

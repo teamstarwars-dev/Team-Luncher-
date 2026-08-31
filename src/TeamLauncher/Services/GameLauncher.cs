@@ -143,6 +143,24 @@ public static class GameLauncher
                         Notifier.Show("Minecraft s'est arrêté",
                             $"Code de sortie {game.ExitCode}. Voir le dossier de l'instance pour les détails.");
                     }
+
+                    // Télémétrie : envoyer le crash à Discord
+                    try
+                    {
+                        string? logTail = null;
+                        string gameLogPath = Path.Combine(gameDir, "game-log.txt");
+                        if (File.Exists(gameLogPath))
+                        {
+                            try
+                            {
+                                var lines = File.ReadLines(gameLogPath).ToList();
+                                logTail = string.Join("\n", lines.TakeLast(30));
+                            }
+                            catch { }
+                        }
+                        TelemetryService.ReportCrash(inst, game.ExitCode, logTail);
+                    }
+                    catch { /* télémétrie non bloquante */ }
                 }
 
                 // sauvegarde automatique des mondes après la partie

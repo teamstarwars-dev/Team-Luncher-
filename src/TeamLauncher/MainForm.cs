@@ -11,6 +11,8 @@ public class MainForm : Form
     private readonly NotifyIcon trayIcon = new();
     private readonly ToolTip toolTip = new();
     private Panel accountChip = new();
+    private readonly Panel titleBar = new();
+    private bool isMaximized = false;
 
     /// <summary>Zone centrale : peint l'image de fond personnalisée (assombrie) sous les pages.</summary>
     private class ContentPanel : Panel
@@ -49,11 +51,103 @@ public class MainForm : Form
         BackColor = Theme.Bg;
         Font = new Font("Segoe UI", 9f);
 
+        // ---- Barre de titre custom sombre (remplace la barre Windows) ----
+        FormBorderStyle = FormBorderStyle.None;
+        titleBar.Dock = DockStyle.Top;
+        titleBar.Height = 32;
+        titleBar.BackColor = Color.FromArgb(18, 18, 22);
+        titleBar.Padding = new Padding(0);
+
+        var titleDragArea = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+        titleDragArea.MouseDown += (_, _) =>
+        {
+            if (isMaximized)
+            {
+                // restaurer avant de drag si maximisé
+                WindowState = FormWindowState.Normal;
+                isMaximized = false;
+                UpdateMaximizeButton();
+            }
+            NativeMethods.ReleaseCapture();
+            NativeMethods.SendMessage(Handle, NativeMethods.WM_NCLBUTTONDOWN, NativeMethods.HT_CAPTION, 0);
+        };
+        titleDragArea.DoubleClick += (_, _) =>
+        {
+            ToggleMaximize();
+        };
+        titleBar.Controls.Add(titleDragArea);
+
+        var btnHeight = 32;
+        var btnWidth = 46;
+
+        // Bouton minimiser
+        var minBtn = new Button
+        {
+            Text = "─",
+            Dock = DockStyle.Right,
+            Width = btnWidth,
+            Height = btnHeight,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 10f),
+            ForeColor = Color.FromArgb(160, 170, 180),
+            BackColor = Color.Transparent,
+            Cursor = Cursors.Hand
+        };
+        minBtn.FlatAppearance.BorderSize = 0;
+        minBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(40, 44, 52);
+        minBtn.Click += (_, _) => { WindowState = FormWindowState.Minimized; };
+        titleBar.Controls.Add(minBtn);
+
+        // Bouton maximiser / restaurer
+        var maxBtn = new Button
+        {
+            Text = "□",
+            Dock = DockStyle.Right,
+            Width = btnWidth,
+            Height = btnHeight,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 10f),
+            ForeColor = Color.FromArgb(160, 170, 180),
+            BackColor = Color.Transparent,
+            Cursor = Cursors.Hand,
+            Tag = "max"
+        };
+        maxBtn.FlatAppearance.BorderSize = 0;
+        maxBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(40, 44, 52);
+        maxBtn.Click += (_, _) => ToggleMaximize();
+        titleBar.Controls.Add(maxBtn);
+
+        // Bouton fermer
+        var closeBtn = new Button
+        {
+            Text = "✕",
+            Dock = DockStyle.Right,
+            Width = btnWidth,
+            Height = btnHeight,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 10f),
+            ForeColor = Color.FromArgb(160, 170, 180),
+            BackColor = Color.Transparent,
+            Cursor = Cursors.Hand
+        };
+        closeBtn.FlatAppearance.BorderSize = 0;
+        closeBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(200, 50, 50);
+        closeBtn.MouseEnter += (_, _) => closeBtn.ForeColor = Color.White;
+        closeBtn.MouseLeave += (_, _) => closeBtn.ForeColor = Color.FromArgb(160, 170, 180);
+        closeBtn.Click += (_, _) =>
+        {
+            trayIcon.Visible = false;
+            Close();
+        };
+        titleBar.Controls.Add(closeBtn);
+
+        Controls.Add(titleBar);
+
         // Logo partout : fenêtre, barre des tâches, Alt-Tab, tray
         try
         {
-            Icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Reflection.Assembly.GetExecutingAssembly().Location) ??
-                   System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
+            Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!) ??
+                   System.Drawing.Icon.ExtractAssociatedIcon(AppContext.BaseDirectory);
             trayIcon.Icon = Icon;
         }
         catch { }
@@ -171,6 +265,19 @@ public class MainForm : Form
             {
                 Show(new InstanceDetailPage(), null);
                 return;
+            }
+
+            // Panneau de gestion serveur : toujours fraîche, lié au serveur sélectionné
+            if (key == "server_panel")
+            {
+                string? serverId = AppEvents.PendingServerId;
+                AppEvents.PendingServerId = null;
+                var hs = DataStore.Settings.HostedServers.FirstOrDefault(h => h.Id == serverId);
+                if (hs != null)
+                {
+                    Show(new ServerPanel(hs), null);
+                    return;
+                }
             }
 
             int idx = navKeys.IndexOf(key);
@@ -295,10 +402,11 @@ public class MainForm : Form
         GameLauncher.StateChanged += OnGameStateChanged;
         OnGameStateChanged();
 
-        // ---- vérification de santé silencieuse : alerte seulement si problème ----
+        // ---- vérification de santé silencieuse + mise à jour auto ----
         Shown += async (_, _) =>
         {
-            _ = UpdateChecker.CheckOnStartupAsync();
+            _ = UpdateService.CheckOnStartupAsync();
+            _ = TelemetryService.ReportStartupAsync();
             var checks = await HealthService.RunAllAsync();
             var problems = checks.Where(c => !c.Ok).ToList();
             if (problems.Count > 0)
@@ -308,6 +416,9 @@ public class MainForm : Form
                 BeginInvoke(() => MessageBox.Show(this, msg,
                     "Team Launcher — Diagnostic", MessageBoxButtons.OK, MessageBoxIcon.Warning));
             }
+
+            // Proposition d'import des mondes CurseForge plus récents (silencieux si rien à importer).
+            BeginInvoke(OfferWorldImport);
         };
 
         PresenceService.Init(); // Rich Presence Discord (si activée)
@@ -390,7 +501,47 @@ public class MainForm : Form
         ShowInTaskbar = true;
         Visible = true;
         WindowState = FormWindowState.Normal;
+        isMaximized = false;
+        UpdateMaximizeButton();
         Activate();
+    }
+
+    private void ToggleMaximize()
+    {
+        if (isMaximized)
+        {
+            WindowState = FormWindowState.Normal;
+            isMaximized = false;
+        }
+        else
+        {
+            WindowState = FormWindowState.Maximized;
+            isMaximized = true;
+        }
+        UpdateMaximizeButton();
+    }
+
+    private void UpdateMaximizeButton()
+    {
+        foreach (Control c in titleBar.Controls)
+        {
+            if (c is Button b && b.Tag as string == "max")
+            {
+                b.Text = isMaximized ? "❐" : "□";
+                return;
+            }
+        }
+    }
+
+    /// <summary>Bordure dessinée autour de la fenêtre quand elle n'est pas maximisée.</summary>
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        if (WindowState == FormWindowState.Normal)
+        {
+            using var pen = new Pen(Color.FromArgb(30, 255, 255, 255), 1);
+            e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+        }
     }
 
     private void OnGameStateChanged()
@@ -432,7 +583,8 @@ public class MainForm : Form
             Text = icon,
             TextAlign = ContentAlignment.MiddleCenter,
             Dock = DockStyle.Top,
-            Height = 28,
+            Height = 34,
+            Margin = new Padding(0, 1, 0, 1),
             FlatStyle = FlatStyle.Flat,
             FlatAppearance = { MouseOverBackColor = Color.Transparent, BorderSize = 0 },
             Font = new Font("Segoe UI", 12f),
@@ -489,6 +641,52 @@ public class MainForm : Form
         content.ResumeLayout();
     }
 
+    /// <summary>
+    /// Détecte les mondes CurseForge plus récents que ceux du launcher et propose
+    /// de les importer. Silencieux si rien à importer ou si aucune instance CurseForge détectée.
+    /// </summary>
+    private void OfferWorldImport()
+    {
+        if (IsDisposed || !IsHandleCreated) return;
+        try
+        {
+            var newer = WorldSyncService.DetectNewerWorldsFromCurseForge();
+            if (newer.Count == 0) return;
+
+            // Regroupe par instance du launcher pour proposer le bon dialog
+            var perInstance = newer
+                .GroupBy(w => w.InstanceName)
+                .Where(g => DataStore.Settings.Instances.Any(i =>
+                    string.Equals(i.Name, g.Key, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (perInstance.Count == 0) return;
+
+            int total = newer.Count;
+            var firstInstance = DataStore.Settings.Instances.First(i =>
+                string.Equals(i.Name, perInstance[0].Key, StringComparison.OrdinalIgnoreCase));
+
+            var msg = $"Team Launcher a détecté {total} monde(s) modifié(s) dans CurseForge\n" +
+                      $"pour {(perInstance.Count == 1 ? $"« {firstInstance.Name} »" : $"{perInstance.Count} instance(s)")}.\n\n" +
+                      "Tu veux les importer maintenant ?";
+            var result = MessageBox.Show(this, msg, "Team Launcher",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result != DialogResult.Yes) return;
+
+            // Ouvre le dialog du premier pack, l'utilisateur pourra enchaîner manuellement
+            using var dlg = new WorldImportDialog(firstInstance);
+            dlg.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            // pas bloquant : si la détection plante, on continue normalement
+            try { File.AppendAllText(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TeamLauncher", "launcher.log"),
+                $"[{DateTime.Now:HH:mm:ss}] Erreur détection mondes CF : {ex}\n"); } catch { }
+        }
+    }
+
     /// <summary>Navigate to the instances page (for deep link support).</summary>
     public void NavigateToInstances()
     {
@@ -509,4 +707,40 @@ public class MainForm : Form
         if (pages.TryGetValue("instances", out var page) && page is InstancesPage instPage)
             instPage.ImportByCode(code);
     }
+
+    protected override void WndProc(ref Message m)
+    {
+        const int WM_NCHITTEST = 0x84;
+        const int HTBOTTOMRIGHT = 17;
+        const int RESIZE_GRIP = 10;
+
+        if (m.Msg == WM_NCHITTEST)
+        {
+            int x = (int)(m.LParam.ToInt64() & 0xFFFF);
+            int y = (int)((m.LParam.ToInt64() >> 16) & 0xFFFF);
+            var pt = PointToClient(new Point(x, y));
+
+            if (WindowState == FormWindowState.Normal)
+            {
+                if (pt.X >= Width - RESIZE_GRIP && pt.Y >= Height - RESIZE_GRIP)
+                {
+                    m.Result = (IntPtr)HTBOTTOMRIGHT;
+                    return;
+                }
+            }
+        }
+        base.WndProc(ref m);
+    }
+}
+
+internal static class NativeMethods
+{
+    public const int WM_NCLBUTTONDOWN = 0xA1;
+    public const int HT_CAPTION = 0x2;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    public static extern bool ReleaseCapture();
 }

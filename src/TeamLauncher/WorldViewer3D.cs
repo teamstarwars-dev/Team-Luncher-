@@ -4,7 +4,7 @@ namespace TeamLauncher;
 
 /// <summary>
 /// Visualiseur 3D isométrique d'un monde Minecraft.
-/// Remplace Amulet : lit les chunks, affiche les blocs en vue isométrique
+/// Lit les chunks, affiche les blocs en vue isométrique
 /// avec rotation, zoom et navigation. Couleurs basées sur le type de bloc.
 /// </summary>
 public class WorldViewer3D : Control
@@ -13,7 +13,7 @@ public class WorldViewer3D : Control
     private readonly Dictionary<(int X, int Z), string> _topBlocks = new();
     private float _zoom = 1f;
     private float _offsetX, _offsetY;
-    private float _rotation = 0.785f; // 45 degrees
+    private float _rotation = 0.785f;
     private bool _dragging;
     private Point _lastMouse;
     private string? _worldPath;
@@ -59,21 +59,107 @@ public class WorldViewer3D : Control
         MinimumSize = new Size(200, 200);
     }
 
-    public void LoadWorld(string worldPath)
+    public void LoadWorldClear()
+    {
+        _worldPath = null;
+        _heightmap.Clear();
+        _topBlocks.Clear();
+        _loaded = false;
+        Invalidate();
+    }
+
+    public async Task LoadWorldAsync(string worldPath, Action<string>? progress = null)
     {
         _worldPath = worldPath;
         _heightmap.Clear();
         _topBlocks.Clear();
         _loaded = false;
 
-        if (worldPath == null) { Invalidate(); return; }
+        if (string.IsNullOrEmpty(worldPath) || !Directory.Exists(worldPath))
+        {
+            Invalidate();
+            return;
+        }
 
         try
         {
-            LoadChunks(worldPath);
+            var result = await Task.Run(() =>
+            {
+                var heightmap = new Dictionary<(int X, int Z), int>();
+                var topBlocks = new Dictionary<(int X, int Z), string>();
+
+                string regionDir = Path.Combine(worldPath, "region");
+                if (!Directory.Exists(regionDir)) return (heightmap, topBlocks);
+
+                var files = Directory.GetFiles(regionDir, "*.mca");
+                int fileCount = files.Length;
+
+                for (int fi = 0; fi < fileCount; fi++)
+                {
+                    var file = files[fi];
+                    var m = System.Text.RegularExpressions.Regex.Match(
+                        Path.GetFileName(file), @"r\.(-?\d+)\.(-?\d+)\.mca$");
+                    if (!m.Success) continue;
+                    int rx = int.Parse(m.Groups[1].Value);
+                    int rz = int.Parse(m.Groups[2].Value);
+
+                    if (fi % 5 == 0)
+                        progress?.Invoke($"Lecture région {fi + 1}/{fileCount}…");
+
+                    for (int lx = 0; lx < 32; lx++)
+                    {
+                        for (int lz = 0; lz < 32; lz++)
+                        {
+                            int cx = rx * 32 + lx;
+                            int cz = rz * 32 + lz;
+
+                            try
+                            {
+                                var chunk = ChunkReader.ReadChunk(file, cx, cz);
+                                if (chunk == null) continue;
+
+                                var blocks = ChunkReader.GetBlocks(chunk);
+                                for (int x = 0; x < 16; x++)
+                                {
+                                    for (int z = 0; z < 16; z++)
+                                    {
+                                        int worldX = cx * 16 + x;
+                                        int worldZ = cz * 16 + z;
+                                        int maxY = -64;
+                                        string topBlock = "minecraft:air";
+
+                                        for (int y = 319; y >= -64; y--)
+                                        {
+                                            if (blocks.TryGetValue((x, y, z), out var name) &&
+                                                name != "minecraft:air")
+                                            {
+                                                maxY = y;
+                                                topBlock = name;
+                                                break;
+                                            }
+                                        }
+
+                                        if (maxY > -64)
+                                        {
+                                            heightmap[(worldX, worldZ)] = maxY;
+                                            topBlocks[(worldX, worldZ)] = topBlock;
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+                return (heightmap, topBlocks);
+            });
+
+            foreach (var kv in result.heightmap) _heightmap[kv.Key] = kv.Value;
+            foreach (var kv in result.topBlocks) _topBlocks[kv.Key] = kv.Value;
             _loaded = true;
-            CenterView();
-            OnStatusChanged?.Invoke($"Monde chargé : {_heightmap.Count} colonnes");
+
+            if (_heightmap.Count > 0) CenterView();
+            OnStatusChanged?.Invoke($"Monde chargé : {_heightmap.Count:N0} colonnes.");
         }
         catch (Exception ex)
         {
@@ -81,66 +167,6 @@ public class WorldViewer3D : Control
         }
 
         Invalidate();
-    }
-
-    private void LoadChunks(string worldPath)
-    {
-        string regionDir = Path.Combine(worldPath, "region");
-        if (!Directory.Exists(regionDir)) return;
-
-        foreach (var file in Directory.GetFiles(regionDir, "*.mca"))
-        {
-            var m = System.Text.RegularExpressions.Regex.Match(
-                Path.GetFileName(file), @"r\.(-?\d+)\.(-?\d+)\.mca$");
-            if (!m.Success) continue;
-            int rx = int.Parse(m.Groups[1].Value);
-            int rz = int.Parse(m.Groups[2].Value);
-
-            for (int lx = 0; lx < 32; lx++)
-            {
-                for (int lz = 0; lz < 32; lz++)
-                {
-                    int cx = rx * 32 + lx;
-                    int cz = rz * 32 + lz;
-
-                    try
-                    {
-                        var chunk = ChunkReader.ReadChunk(file, cx, cz);
-                        if (chunk == null) continue;
-
-                        var blocks = ChunkReader.GetBlocks(chunk);
-                        for (int x = 0; x < 16; x++)
-                        {
-                            for (int z = 0; z < 16; z++)
-                            {
-                                int worldX = cx * 16 + x;
-                                int worldZ = cz * 16 + z;
-                                int maxY = -64;
-                                string topBlock = "minecraft:air";
-
-                                for (int y = 319; y >= -64; y--)
-                                {
-                                    if (blocks.TryGetValue((x, y, z), out var name) &&
-                                        name != "minecraft:air")
-                                    {
-                                        maxY = y;
-                                        topBlock = name;
-                                        break;
-                                    }
-                                }
-
-                                if (maxY > -64)
-                                {
-                                    _heightmap[(worldX, worldZ)] = maxY;
-                                    _topBlocks[(worldX, worldZ)] = topBlock;
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-                }
-            }
-        }
     }
 
     private void CenterView()
@@ -154,7 +180,6 @@ public class WorldViewer3D : Control
         float worldCX = (minX + maxX) / 2f;
         float worldCZ = (minZ + maxZ) / 2f;
 
-        // Isometric projection
         _offsetX = Width / 2f - worldCX * _zoom * 1.4f;
         _offsetY = Height / 3f;
     }
@@ -168,7 +193,7 @@ public class WorldViewer3D : Control
         if (!_loaded || _heightmap.Count == 0)
         {
             using var f = new Font("Segoe UI", 11f);
-            string msg = _worldPath == null ? "Charge un monde pour le visualiser." : "Aucun chunk trouvé.";
+            string msg = _worldPath == null ? "Charge un monde pour le visualiser." : "Chargement…";
             var sz = TextRenderer.MeasureText(msg, f);
             TextRenderer.DrawText(g, msg, f,
                 new Point((Width - sz.Width) / 2, (Height - sz.Height) / 2), Theme.TextDim);
@@ -181,7 +206,6 @@ public class WorldViewer3D : Control
         float cos = MathF.Cos(_rotation);
         float sin = MathF.Sin(_rotation);
 
-        // Sort columns by depth for painter's algorithm
         var columns = new List<(int X, int Z, int H, string BlockName)>();
         foreach (var k in _heightmap.Keys)
         {
@@ -197,7 +221,6 @@ public class WorldViewer3D : Control
         {
             int x = col.X, z = col.Z, y = col.H;
             string block = col.BlockName;
-            // Isometric projection
             float isoX = (x - z) * _zoom * 0.7f;
             float isoY = (x + z) * _zoom * 0.35f - y * _zoom * 0.8f;
 
@@ -209,7 +232,6 @@ public class WorldViewer3D : Control
 
             Color color = GetBlockColor(block);
 
-            // Height shading
             float heightFactor = Math.Clamp((y + 64) / 384f, 0.3f, 1f);
             int r = (int)(color.R * heightFactor);
             int gg = (int)(color.G * heightFactor);
@@ -220,7 +242,6 @@ public class WorldViewer3D : Control
 
             float sz = Math.Max(_zoom * 1.4f, 2f);
 
-            // Draw isometric diamond (top face of block)
             var top = new PointF(px, py - sz * 0.4f);
             var left = new PointF(px - sz * 0.7f, py);
             var bottom = new PointF(px, py + sz * 0.4f);
@@ -229,20 +250,17 @@ public class WorldViewer3D : Control
             using var brush = new SolidBrush(shaded);
             g.FillPolygon(brush, new[] { top, left, bottom, right });
 
-            // Right face (darker)
             var rightDark = ControlPaint.Dark(shaded, 0.2f);
             using var rightBrush = new SolidBrush(rightDark);
             g.FillPolygon(rightBrush, new[] { left, bottom,
                 new PointF(px, py + sz * 0.8f), new PointF(px - sz * 0.7f, py + sz * 0.4f) });
 
-            // Left face (darkest)
             var leftDark = ControlPaint.Dark(shaded, 0.35f);
             using var leftBrush = new SolidBrush(leftDark);
             g.FillPolygon(leftBrush, new[] { bottom, right,
                 new PointF(px, py + sz * 0.8f), new PointF(px + sz * 0.7f, py + sz * 0.4f) });
         }
 
-        // Info overlay
         using var infoFont = new Font("Consolas", 9f);
         TextRenderer.DrawText(g,
             $"Zoom: {_zoom:F1}x | Blocs: {_heightmap.Count:N0} | Rot: {(int)(_rotation * 180 / MathF.PI)}°",
@@ -253,7 +271,6 @@ public class WorldViewer3D : Control
     {
         if (BlockColors.TryGetValue(block, out var c)) return c;
 
-        // Generate a consistent color from the block name
         int hash = block.GetHashCode();
         int r = 80 + (hash & 0x7F);
         int gg = 80 + ((hash >> 8) & 0x7F);

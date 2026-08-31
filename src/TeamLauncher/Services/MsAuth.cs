@@ -96,7 +96,7 @@ public static class MsAuth
             {
                 long ts = tsEl.GetInt64();
                 long age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - ts;
-                if (age > 86400) { AuthLog("Cache disque : expiré (>${age}s)."); return null; }
+                if (age > 604800) { AuthLog($"Cache disque : expiré ({age}s)."); return null; }
             }
 
             string name = root.GetProperty("name").GetString()!;
@@ -186,7 +186,7 @@ public static class MsAuth
             }
             catch { }
 
-            ShowCodeDialog(owner, verifyUri, userCode);
+            var codeDlg = ShowCodeDialog(owner, verifyUri, userCode);
 
             // 2. Attente de la connexion du joueur
             while (true)
@@ -209,11 +209,19 @@ public static class MsAuth
                 if (err == "authorization_pending") continue;
                 if (err == "slow_down") { interval += 5; continue; }
                 if (err == "authorization_declined")
+                {
+                    try { codeDlg.Close(); codeDlg.Dispose(); } catch { }
                     throw new Exception("Connexion refusée depuis la page Microsoft.");
+                }
                 if (err == "expired_token")
+                {
+                    try { codeDlg.Close(); codeDlg.Dispose(); } catch { }
                     throw new Exception("Le code a expiré avant d'être validé. Relancez la connexion.");
+                }
+                try { codeDlg.Close(); codeDlg.Dispose(); } catch { }
                 throw new Exception("Connexion refusée : " + err);
             }
+            try { codeDlg.Close(); codeDlg.Dispose(); } catch { }
         }
 
         return await XboxToMinecraftAsync(msAccessToken);
@@ -478,7 +486,7 @@ public static class MsAuth
         else File.Move(tmp, TokenFile);
     }
 
-    private static void ShowCodeDialog(IWin32Window owner, string uri, string code)
+    private static Form ShowCodeDialog(IWin32Window owner, string uri, string code)
     {
         var dlg = new Form
         {
@@ -547,6 +555,7 @@ public static class MsAuth
         dlg.Controls.Add(buttons);
         dlg.Controls.Add(bottom);
         dlg.Show(owner);
+        return dlg;
     }
 }
 

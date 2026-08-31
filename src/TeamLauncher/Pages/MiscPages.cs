@@ -93,6 +93,7 @@ public class AccountPage : UserControl, IRefreshable
         offRadio.AutoSize = true;
         offRadio.Margin = new Padding(0, 14, 0, 0);
 
+        Theme.ApplyInput(pseudoBox);
         pseudoBox.PlaceholderText = Lang.T("Pseudo", "Username");
         pseudoBox.Width = 280;
         pseudoBox.Font = new Font("Segoe UI", 11f);
@@ -202,14 +203,17 @@ public class SettingsPage : UserControl, IRefreshable
         var integrationItems = new List<Control>();
         var advancedItems = new List<Control>();
 
+        Theme.ApplyInput(javaBox);
         javaBox.Width = 420;
         javaBox.PlaceholderText = Lang.T("Chemin de Java (vide = détection automatique)", "Java path (empty = auto-detect)");
 
+        Theme.ApplyInput(ramBox);
         ramBox.Minimum = 1;
         ramBox.Maximum = 32;
         ramBox.Value = Math.Clamp(DataStore.Settings.MaxRamGb, 1, 32);
         ramBox.Width = 90;
 
+        Theme.ApplyInput(dirBox);
         dirBox.Width = 420;
         dirBox.ReadOnly = true;
 
@@ -338,6 +342,7 @@ public class SettingsPage : UserControl, IRefreshable
         discordCheck.AutoSize = true;
         discordCheck.Margin = new Padding(0, 6, 0, 0);
 
+        Theme.ApplyInput(discordBox);
         discordBox.Width = 420;
         discordBox.PlaceholderText = Lang.T("ID d'application Discord (discord.com/developers/applications)", "Discord Application ID (discord.com/developers/applications)");
 
@@ -361,6 +366,7 @@ public class SettingsPage : UserControl, IRefreshable
         // ---- Mises à jour automatiques ----
         integrationItems.Add(SectionHeader("MISES À JOUR AUTOMATIQUES"));
         var updateBox = new TextBox { Width = 420 };
+        Theme.ApplyInput(updateBox);
         updateBox.PlaceholderText = "URL du flux de mises à jour (Velopack, optionnel)";
         var updateBtn = new Button { Text = "Enregistrer", Width = 160, Height = 36 };
         Theme.Apply(updateBtn);
@@ -402,6 +408,7 @@ public class SettingsPage : UserControl, IRefreshable
         // ---- Actualités + langue ----
         generalItems.Add(SectionHeader("ACTUALITÉS & LANGUE"));
         var newsBox = new TextBox { Width = 420 };
+        Theme.ApplyInput(newsBox);
         newsBox.PlaceholderText = Lang.T("URL des actualités (fichier JSON : title, date, tag, text)", "News URL (JSON file: title, date, tag, text)");
         newsBox.Text = DataStore.Settings.NewsUrl;
         var langBox = new ComboBox
@@ -438,6 +445,7 @@ public class SettingsPage : UserControl, IRefreshable
         // ---- Clé API CurseForge ----
         integrationItems.Add(SectionHeader("CURSEFORGE"));
         var cfBox = new TextBox { Width = 420 };
+        Theme.ApplyInput(cfBox);
         cfBox.PlaceholderText = Lang.T("Clé API CurseForge (console.curseforge.com — gratuite)", "CurseForge API key (console.curseforge.com — free)");
         cfBox.Text = DataStore.Settings.CurseForgeApiKey;
         cfBox.UseSystemPasswordChar = true;
@@ -455,8 +463,112 @@ public class SettingsPage : UserControl, IRefreshable
             Notifier.Show("CurseForge", "Clé API enregistrée.");
         };
 
+        // ---- VPS / Pterodactyl ----
+        integrationItems.Add(SectionHeader("VPS / PTERODACTYL"));
+
+        var vpsUrlBox = new TextBox { Width = 420 };
+        Theme.ApplyInput(vpsUrlBox);
+        vpsUrlBox.PlaceholderText = "https://panel.monteam.com";
+        vpsUrlBox.Text = DataStore.Settings.VpsUrl;
+        var vpsUrlRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 0) };
+        vpsUrlRow.Controls.Add(new Label { Text = "URL du panel :", ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 8, 0) });
+        vpsUrlRow.Controls.Add(vpsUrlBox);
+        integrationItems.Add(vpsUrlRow);
+
+        var vpsKeyBox = new TextBox { Width = 420 };
+        Theme.ApplyInput(vpsKeyBox);
+        vpsKeyBox.PlaceholderText = "Clé API Client Pterodactyl";
+        vpsKeyBox.Text = DataStore.Settings.VpsApiKey;
+        vpsKeyBox.UseSystemPasswordChar = true;
+        var vpsKeyRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 0) };
+        vpsKeyRow.Controls.Add(new Label { Text = "Clé API :", ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 8, 0) });
+        vpsKeyRow.Controls.Add(vpsKeyBox);
+        integrationItems.Add(vpsKeyRow);
+
+        var vpsSaveBtn = new Button { Text = "Enregistrer VPS", Width = 160, Height = 36 };
+        Theme.Apply(vpsSaveBtn);
+        vpsSaveBtn.Margin = new Padding(0, 6, 0, 0);
+        var vpsStatus = new Label { Text = "", ForeColor = Theme.Accent, AutoSize = true, Margin = new Padding(10, 6, 0, 0) };
+        var vpsSaveRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
+        vpsSaveRow.Controls.Add(vpsSaveBtn);
+        vpsSaveRow.Controls.Add(vpsStatus);
+        integrationItems.Add(vpsSaveRow);
+        vpsSaveBtn.Click += async (_, _) =>
+        {
+            DataStore.Settings.VpsUrl = vpsUrlBox.Text.Trim();
+            DataStore.Settings.VpsApiKey = vpsKeyBox.Text.Trim();
+            DataStore.Save();
+            try
+            {
+                var servers = await PterodactylApi.ListServersAsync();
+                vpsStatus.ForeColor = Color.FromArgb(80, 200, 120);
+                vpsStatus.Text = $"✓ Connecté — {servers.Count} serveur(s) trouvé(s).";
+            }
+            catch (Exception ex)
+            {
+                vpsStatus.ForeColor = Color.FromArgb(220, 80, 80);
+                vpsStatus.Text = "✕ " + ex.Message.Split('\n')[0];
+            }
+        };
+
+        // ---- Télémétrie / Logs distants ----
+        integrationItems.Add(SectionHeader("TÉLÉMÉTRIE & LOGS DISTANTS"));
+
+        var telemetryCheck = new CheckBox
+        {
+            Text = "Envoyer les rapports de crash et stats d'utilisation vers Discord",
+            ForeColor = Theme.Text,
+            AutoSize = true,
+            Checked = DataStore.Settings.TelemetryEnabled,
+            Margin = new Padding(0, 6, 0, 0)
+        };
+
+        var webhookBox = new TextBox { Width = 420 };
+        Theme.ApplyInput(webhookBox);
+        webhookBox.PlaceholderText = "URL du webhook Discord (clic droit → Copier le lien du webhook)";
+        webhookBox.Text = DataStore.Settings.DiscordTelemetryWebhook;
+        webhookBox.UseSystemPasswordChar = true;
+        var webhookRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 0) };
+        webhookRow.Controls.Add(new Label { Text = "Webhook :", ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 8, 0) });
+        webhookRow.Controls.Add(webhookBox);
+        integrationItems.Add(webhookRow);
+
+        var telemetryInfo = new Label
+        {
+            Text = "Les rapports incluent : crashs Minecraft, crashs du launcher, stats de lancement.\n" +
+                   "Aucune donnée personnelle n'est envoyée (pas de pseudo, pas de mots de passe).",
+            ForeColor = Theme.TextDim,
+            AutoSize = true,
+            MaximumSize = new Size(420, 0),
+            Margin = new Padding(0, 4, 0, 0)
+        };
+
+        var telemetrySaveBtn = new Button { Text = "Enregistrer", Width = 160, Height = 36 };
+        Theme.Apply(telemetrySaveBtn);
+        telemetrySaveBtn.Margin = new Padding(10, 0, 0, 0);
+        var telemetrySaveRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
+        telemetrySaveRow.Controls.Add(telemetrySaveBtn);
+        integrationItems.AddRange(new Control[] { telemetryCheck, webhookRow, telemetryInfo, telemetrySaveRow });
+        telemetrySaveBtn.Click += (_, _) =>
+        {
+            DataStore.Settings.TelemetryEnabled = telemetryCheck.Checked;
+            DataStore.Settings.DiscordTelemetryWebhook = webhookBox.Text.Trim();
+            DataStore.Save();
+            Notifier.Show("Télémétrie", telemetryCheck.Checked
+                ? "Rapports activés. Les crashs seront envoyés sur Discord."
+                : "Rapports désactivés.");
+        };
+
         // ---- Maintenance ----
         var maintenanceRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
+        var autoUpdateBtn = new Button { Text = $"🔄 Vérifier mise à jour (v{UpdateService.CurrentVersion})", Width = 280, Height = 36 };
+        Theme.Apply(autoUpdateBtn);
+        autoUpdateBtn.Click += async (_, _) =>
+        {
+            try { await UpdateService.PromptUpdateAsync(FindForm()!); }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "Team Launcher"); }
+        };
+        maintenanceRow.Controls.Add(autoUpdateBtn);
         var cleanBtn = new Button { Text = "🧹 Libérer de l'espace (cache)", Width = 240, Height = 36 };
         Theme.Apply(cleanBtn);
         cleanBtn.Click += (_, _) =>

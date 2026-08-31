@@ -44,12 +44,15 @@ public class ExplorePage : UserControl, IRefreshable
         });
 
         var bar = new Panel { Height = 44, Width = 920, Margin = new Padding(0, 10, 0, 0) };
+        Theme.ApplyInput(searchBox);
         searchBox.SetBounds(0, 4, 360, 30);
         searchBox.Font = new Font("Segoe UI", 11f);
+        Theme.ApplyInput(sourceBox);
         sourceBox.DropDownStyle = ComboBoxStyle.DropDownList;
         sourceBox.SetBounds(370, 4, 130, 30);
         sourceBox.Items.AddRange(new object[] { "Modrinth", "CurseForge" });
         sourceBox.SelectedIndex = 0;
+        Theme.ApplyInput(typeBox);
         typeBox.DropDownStyle = ComboBoxStyle.DropDownList;
         typeBox.SetBounds(510, 4, 140, 30);
         typeBox.Items.AddRange(new object[] { "Modpacks", "Mods", "Shaders" });
@@ -90,6 +93,19 @@ public class ExplorePage : UserControl, IRefreshable
             List<SearchHit> hits;
             if (isCf)
             {
+                // Vérifier la clé API CurseForge
+                if (string.IsNullOrWhiteSpace(DataStore.Settings.CurseForgeApiKey) &&
+                    string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CURSEFORGE_API_KEY")))
+                {
+                    ShowMessage(
+                        "Clé API CurseForge requise.\n\n" +
+                        "1. Crée un compte sur console.curseforge.com\n" +
+                        "2. Génère une clé API (gratuite)\n" +
+                        "3. Colle-la dans Paramètres → CurseForge API\n\n" +
+                        "En attendant, passe sur Modrinth (onglet source à gauche).");
+                    return;
+                }
+
                 int classId = category switch
                 {
                     "Mods" => CurseForgeApi.ClassMods,
@@ -123,9 +139,7 @@ public class ExplorePage : UserControl, IRefreshable
         }
         catch (Exception ex)
         {
-            ShowMessage(ex.Message.Contains("Clé API")
-                ? ex.Message
-                : "Impossible de joindre la source : " + ex.Message);
+            ShowMessage("Erreur CurseForge : " + ex.Message);
         }
     }
 
@@ -261,8 +275,8 @@ public class ExplorePage : UserControl, IRefreshable
         try
         {
             string url = h.Source == "curseforge"
-                ? $"https://www.curseforge.com/minecraft/search?search={Uri.EscapeDataString(h.Title)}"
-                : $"https://modrinth.com/project/{h.Key}";
+                ? $"https://www.curseforge.com/minecraft/mc-mods/{h.Key}"
+                : $"https://modrinth.com/{(h.Key.Contains('/') ? "project" : "mod")}/{h.Key}";
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
         catch { }

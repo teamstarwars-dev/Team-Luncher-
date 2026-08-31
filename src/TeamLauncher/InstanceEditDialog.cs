@@ -21,11 +21,15 @@ public class InstanceEditDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         BackColor = Theme.Panel;
 
+        Theme.ApplyInput(nameBox);
         nameBox.Text = inst.Name;
-        nameBox.Font = new Font("Segoe UI", 11f);
+        Theme.ApplyInput(descBox);
         descBox.Text = inst.Description;
         imagePath = inst.ImagePath;
 
+        Theme.ApplyInput(loaderBox);
+        Theme.ApplyInput(versionBox);
+        Theme.ApplyInput(ramBox);
         loaderBox.Items.AddRange(new object[] { "Vanilla", "Forge", "Fabric", "NeoForge", "Quilt" });
         loaderBox.SelectedItem = loaderBox.Items.Contains(inst.Loader) ? inst.Loader : "Vanilla";
 

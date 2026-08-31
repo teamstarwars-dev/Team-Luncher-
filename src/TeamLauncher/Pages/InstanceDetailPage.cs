@@ -133,6 +133,7 @@ public class InstanceDetailPage : UserControl, IRefreshable
         AddTab("🌍 Mondes");
         AddTab("🎨 Shaders");
         AddTab("🖼️ Resource Packs");
+        AddTab("📝 Configs");
         AddTab("📷 Screenshots");
 
         // ---- zone de contenu ----
@@ -272,6 +273,7 @@ public class InstanceDetailPage : UserControl, IRefreshable
             case "🌍 Mondes": LoadWorlds(); break;
             case "🎨 Shaders": LoadFiles("shaderpacks"); break;
             case "🖼️ Resource Packs": LoadFiles("resourcepacks"); break;
+            case "📝 Configs": LoadFiles("config"); break;
             case "📷 Screenshots": LoadScreenshots(); break;
             case "🧩 Mods": LoadMods(); break;
             default: LoadDescription(); break;
@@ -411,32 +413,52 @@ public class InstanceDetailPage : UserControl, IRefreshable
     {
         itemsList.Columns.Clear();
         itemsList.Items.Clear();
-        itemsList.Columns.Add("Monde", 300);
-        itemsList.Columns.Add("Dernière partie", 150);
-        itemsList.Columns.Add("État régions", 160);
-        itemsList.Columns.Add("Taille", 90);
+        itemsList.Columns.Add("Monde", 240);
+        itemsList.Columns.Add("Dernière partie", 130);
+        itemsList.Columns.Add("État régions", 130);
+        itemsList.Columns.Add("Origine", 110);
+        itemsList.Columns.Add("Taille", 70);
 
         string savesDir = Path.Combine(DataStore.InstancesRoot, inst.Id, "saves");
         if (!Directory.Exists(savesDir))
         {
-            itemsList.Items.Add(new ListViewItem(new[] { "Aucun monde.", "", "", "" }));
+            itemsList.Items.Add(new ListViewItem(new[] { "Aucun monde.", "", "", "", "" }));
             return;
         }
+
+        // Récupère le snapshot CurseForge pour annoter la provenance
+        string cfRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "curseforge", "minecraft", "Instances", inst.Name, "minecraft", "saves");
+        var cfWorlds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (Directory.Exists(cfRoot))
+            foreach (var w in Directory.GetDirectories(cfRoot))
+                if (File.Exists(Path.Combine(w, "level.dat")))
+                    cfWorlds.Add(Path.GetFileName(w));
+
         foreach (var w in Directory.GetDirectories(savesDir))
         {
             var (name, lastPlayed) = WorldTools.ReadLevelDat(w);
             long size = Directory.GetFiles(w, "*", SearchOption.AllDirectories)
                 .Sum(f => new FileInfo(f).Length);
+            string worldName = Path.GetFileName(w);
+            bool inCf = cfWorlds.Contains(worldName);
+
             itemsList.Items.Add(new ListViewItem(new[]
             {
-                name ?? Path.GetFileName(w),
+                name ?? worldName,
                 lastPlayed?.ToString("dd/MM/yyyy HH:mm") ?? "?",
                 WorldTools.CountEmptyRegions(w) > 0 ? "régions à nettoyer" : "ok",
+                inCf ? "CurseForge + Launcher" : "Launcher seul",
                 size / 1024.0 / 1024.0 > 1 ? $"{size / 1024.0 / 1024.0:0.#} Mo" : $"{size / 1024.0:0.#} Ko"
-            }) { Tag = w });
+            })
+            {
+                Tag = w,
+                ForeColor = inCf ? Theme.Text : Theme.TextDim
+            });
         }
         if (itemsList.Items.Count == 0)
-            itemsList.Items.Add(new ListViewItem(new[] { "Aucun monde sauvegardé.", "", "", "" }));
+            itemsList.Items.Add(new ListViewItem(new[] { "Aucun monde sauvegardé.", "", "", "", "" }));
     }
 
     // ---------------- actions contextuelles ----------------
@@ -464,36 +486,63 @@ public class InstanceDetailPage : UserControl, IRefreshable
             actionsRow.Controls.Add(worldEditBtn);
 
             var openModsBtn = MkActionBtn("📂 Ouvrir le dossier mods");
-            openModsBtn.Click += (_, _) =>
-            {
-                string dir = Path.Combine(DataStore.InstancesRoot, inst.Id, "mods");
-                Directory.CreateDirectory(dir);
-                try { Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true }); } catch { }
-            };
+            openModsBtn.Click += (_, _) => OpenFolder("mods");
             actionsRow.Controls.Add(openModsBtn);
         }
         else if (currentTab == "🌍 Mondes")
         {
-            var openSavesBtn = MkActionBtn("📂 Ouvrir le dossier saves");
-            openSavesBtn.Click += (_, _) =>
+            var importCfBtn = MkActionBtn("⇆ Importer depuis CurseForge");
+            importCfBtn.ForeColor = Theme.Accent;
+            importCfBtn.Click += (_, _) =>
             {
-                string dir = Path.Combine(DataStore.InstancesRoot, inst.Id, "saves");
-                Directory.CreateDirectory(dir);
-                try { Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true }); } catch { }
+                using var dlg = new WorldImportDialog(inst);
+                if (dlg.ShowDialog(FindForm()) == DialogResult.OK) RefreshData();
             };
+            actionsRow.Controls.Add(importCfBtn);
+
+            var openSavesBtn = MkActionBtn("📂 Ouvrir le dossier saves");
+            openSavesBtn.Click += (_, _) => OpenFolder("saves");
             actionsRow.Controls.Add(openSavesBtn);
+        }
+        else if (currentTab == "🎨 Shaders")
+        {
+            var openShadersBtn = MkActionBtn("📂 Ouvrir le dossier shaders");
+            openShadersBtn.Click += (_, _) => OpenFolder("shaderpacks");
+            actionsRow.Controls.Add(openShadersBtn);
+        }
+        else if (currentTab == "🖼️ Resource Packs")
+        {
+            var openRpBtn = MkActionBtn("📂 Ouvrir le dossier resource packs");
+            openRpBtn.Click += (_, _) => OpenFolder("resourcepacks");
+            actionsRow.Controls.Add(openRpBtn);
         }
         else if (currentTab == "📷 Screenshots")
         {
             var openBtn = MkActionBtn("📂 Ouvrir le dossier screenshots");
-            openBtn.Click += (_, _) =>
-            {
-                string dir = Path.Combine(DataStore.InstancesRoot, inst.Id, "screenshots");
-                Directory.CreateDirectory(dir);
-                try { Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true }); } catch { }
-            };
+            openBtn.Click += (_, _) => OpenFolder("screenshots");
             actionsRow.Controls.Add(openBtn);
         }
+        else if (currentTab == "📝 Configs")
+        {
+            var openCfgBtn = MkActionBtn("📂 Ouvrir le dossier config");
+            openCfgBtn.Click += (_, _) => OpenFolder("config");
+            actionsRow.Controls.Add(openCfgBtn);
+        }
+
+        // Bouton "Ouvrir le dossier instance" toujours présent
+        var openAllBtn = MkActionBtn("📂 Dossier instance");
+        openAllBtn.Click += (_, _) =>
+        {
+            try { Process.Start(new ProcessStartInfo(Path.Combine(DataStore.InstancesRoot, inst.Id)) { UseShellExecute = true }); } catch { }
+        };
+        actionsRow.Controls.Add(openAllBtn);
+    }
+
+    private void OpenFolder(string subFolder)
+    {
+        string dir = Path.Combine(DataStore.InstancesRoot, inst.Id, subFolder);
+        Directory.CreateDirectory(dir);
+        try { Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true }); } catch { }
     }
 
     private static Button MkActionBtn(string text)

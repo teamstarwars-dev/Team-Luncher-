@@ -3,33 +3,26 @@ using System.Drawing.Drawing2D;
 namespace TeamLauncher;
 
 /// <summary>
-/// Rendu 3D temps réel du modèle Minecraft (tête, corps, bras, jambes) à partir
-/// d'un fichier de skin : quads texturés par mapping affine, triés par profondeur.
-/// Modes : idle (rotation lente) et marche (animation de bras/jambes).
+/// Rendu 3D du modèle Minecraft joueur — exactement comme le vrai Minecraft.
+/// Chaque face = polygon rempli avec la couleur dominante de la zone UV + shading par face.
+/// Rotation souris, animation marche, zoom molette.
 /// </summary>
 public class SkinPreview : Control
 {
     private Bitmap? _skin;
-    private float _angle;
+    private float _rotY = 0.5f;
+    private float _rotX = 0.15f;
+    private float _zoom = 1f;
     private float _walkPhase;
     private bool _walking;
+    private bool _dragging;
+    private Point _lastMouse;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 33 };
 
-    private sealed record Quad(PointF[] Dst, RectangleF Uv, float Depth);
-
-    /// <summary>
-    /// Active/désactive l'animation de marche.
-    /// </summary>
     public bool Walking
     {
         get => _walking;
-        set
-        {
-            _walking = value;
-            _walkPhase = 0;
-            if (_skin != null && !_timer.Enabled) _timer.Start();
-            Invalidate();
-        }
+        set { _walking = value; _walkPhase = 0; if (_skin != null && !_timer.Enabled) _timer.Start(); Invalidate(); }
     }
 
     public SkinPreview()
@@ -38,23 +31,13 @@ public class SkinPreview : Control
                  ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
         BackColor = Theme.Card;
         MinimumSize = new Size(120, 160);
-        _timer.Tick += OnTimerTick;
-    }
-
-    private void OnTimerTick(object? s, EventArgs e)
-    {
-        if (_skin == null) return;
-        if (_walking)
+        _timer.Tick += (_, _) =>
         {
-            _walkPhase += 0.12f;
-            if (_walkPhase > MathF.PI * 2) _walkPhase -= MathF.PI * 2;
-        }
-        else
-        {
-            _angle += 0.04f;
-            if (_angle > MathF.PI * 2) _angle -= MathF.PI * 2;
-        }
-        Invalidate();
+            if (_skin == null) return;
+            if (_walking) { _walkPhase += 0.12f; if (_walkPhase > MathF.PI * 2) _walkPhase -= MathF.PI * 2; }
+            else { _rotY += 0.03f; }
+            Invalidate();
+        };
     }
 
     public void SetSkin(Image? skin)
@@ -62,16 +45,8 @@ public class SkinPreview : Control
         var old = _skin;
         _skin = skin == null ? null : new Bitmap(skin, new Size(64, 64));
         old?.Dispose();
-        if (_skin != null)
-        {
-            _angle = -0.3f;
-            _walkPhase = 0;
-            if (!_timer.Enabled) _timer.Start();
-        }
-        else
-        {
-            _timer.Stop();
-        }
+        if (_skin != null) { _rotY = 0.5f; _walkPhase = 0; if (!_timer.Enabled) _timer.Start(); }
+        else _timer.Stop();
         Invalidate();
     }
 
@@ -79,9 +54,8 @@ public class SkinPreview : Control
     {
         base.OnPaint(e);
         var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.HighQuality;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
         g.InterpolationMode = InterpolationMode.NearestNeighbor;
-        g.PixelOffsetMode = PixelOffsetMode.Half;
 
         if (_skin == null || Width < 10 || Height < 10)
         {
@@ -92,167 +66,180 @@ public class SkinPreview : Control
             return;
         }
 
-        using (var bg = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
+        // Fond dégradé
+        using (var bg = new LinearGradientBrush(ClientRectangle,
+            Color.FromArgb(40, 30, 50), Color.FromArgb(20, 20, 30), 90f))
             g.FillRectangle(bg, ClientRectangle);
 
-        float s = Math.Min(Width / 28f, Height / 46f);
+        float scale = Math.Min(Width / 18f, Height / 34f) * _zoom;
         float cx = Width / 2f;
-        float cy = Height * 0.42f;
-        float cos = MathF.Cos(_angle), sin = MathF.Sin(_angle);
+        float cy = Height * 0.48f;
 
-        // Walk animation offsets
-        float armSwing = _walking ? MathF.Sin(_walkPhase) * 0.6f : 0f;
-        float legSwing = _walking ? MathF.Sin(_walkPhase + MathF.PI) * 0.5f : 0f;
-        float bodyBob = _walking ? MathF.Abs(MathF.Sin(_walkPhase * 2)) * 0.3f : 0f;
+        float armSwing = _walking ? MathF.Sin(_walkPhase) * 0.7f : 0f;
+        float legSwing = _walking ? MathF.Sin(_walkPhase + MathF.PI) * 0.6f : 0f;
+        float bodyBob = _walking ? MathF.Abs(MathF.Sin(_walkPhase * 2)) * 0.5f : 0f;
+
+        float cosY = MathF.Cos(_rotY), sinY = MathF.Sin(_rotY);
+        float cosX = MathF.Cos(_rotX), sinX = MathF.Sin(_rotX);
 
         PointF Project(float x, float y, float z)
         {
-            float rx = x * cos + z * sin;
-            float rz = -x * sin + z * cos;
-            float persp = 1f + rz * 0.015f;
-            return new PointF(cx + rx * s * persp, cy + (y - bodyBob) * s * persp);
+            float rx = x * cosY + z * sinY;
+            float rz = -x * sinY + z * cosY;
+            float ry = y * cosX - rz * sinX;
+            float rz2 = y * sinX + rz * cosX;
+            float persp = 1f + rz2 * 0.015f;
+            return new PointF(cx + rx * scale * persp, cy + (ry - bodyBob) * scale * persp);
         }
 
-        var faces = new List<Quad>();
+        float Depth(float x, float z) => -x * sinY + z * cosY;
 
-        void AddQuad(PointF[] pts, RectangleF uv, (float X, float Z)[] corners)
+        // Collect faces: polygon points + color + depth
+        var faces = new List<(PointF[] pts, Color color, float depth)>();
+
+        Color Sample(RectangleF uv)
         {
-            float depth = corners.Sum(c => -c.X * sin + c.Z * cos) / corners.Length;
-            faces.Add(new Quad(pts, uv, depth));
+            int x0 = Math.Clamp((int)uv.X, 0, 63), y0 = Math.Clamp((int)uv.Y, 0, 63);
+            int x1 = Math.Clamp((int)uv.Right, 0, 63), y1 = Math.Clamp((int)uv.Bottom, 0, 63);
+            long r = 0, gg = 0, b = 0, cnt = 0;
+            for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    var c = _skin.GetPixel(x, y);
+                    if (c.A < 128) continue;
+                    r += c.R; gg += c.G; b += c.B; cnt++;
+                }
+            if (cnt == 0) return Color.FromArgb(180, 160, 140);
+            return Color.FromArgb(255, (int)(r / cnt), (int)(gg / cnt), (int)(b / cnt));
         }
 
-        void Face(RectangleF uv,
+        void AddFace(RectangleF uv, float shade,
             (float X, float Y, float Z) a, (float X, float Y, float Z) b,
             (float X, float Y, float Z) c, (float X, float Y, float Z) d)
         {
-            AddQuad(new[] { Project(a.X, a.Y, a.Z), Project(b.X, b.Y, b.Z),
-                            Project(c.X, c.Y, c.Z), Project(d.X, d.Y, d.Z) },
-                uv, new[] { (a.X, a.Z), (b.X, b.Z), (c.X, c.Z), (d.X, d.Z) });
+            var pts = new[] { Project(a.X, a.Y, a.Z), Project(b.X, b.Y, b.Z),
+                              Project(c.X, c.Y, c.Z), Project(d.X, d.Y, d.Z) };
+            float depth = (Depth(a.X, a.Z) + Depth(b.X, b.Z) + Depth(c.X, c.Z) + Depth(d.X, d.Z)) / 4f;
+            Color baseColor = Sample(uv);
+            Color shaded = ShiftBrightness(baseColor, shade);
+            faces.Add((pts, shaded, depth));
         }
 
         void Box(float x0, float x1, float y0, float y1, float z0, float z1,
-                 RectangleF front, RectangleF back, RectangleF left, RectangleF right, RectangleF top)
+            RectangleF front, RectangleF back, RectangleF left, RectangleF right, RectangleF top, RectangleF bottom)
         {
-            Face(front, (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1));
-            Face(back,  (x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0));
-            Face(left,  (x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0));
-            Face(right, (x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1));
-            Face(top,   (x0, y0, z0), (x1, y0, z0), (x1, y0, z1), (x0, y0, z1));
+            // Comme Minecraft : chaque face a un éclairage différent
+            // Top = +20%, Front = 0%, Right = -10%, Left = -20%, Back = -15%, Bottom = -30%
+            AddFace(front,  0f,      (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1));
+            AddFace(back,  -0.15f,  (x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0));
+            AddFace(left,  -0.20f,  (x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0));
+            AddFace(right, -0.10f,  (x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1));
+            AddFace(top,    0.20f,  (x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1));
+            AddFace(bottom,-0.30f,  (x0, y0, z1), (x1, y0, z1), (x1, y0, z0), (x0, y0, z0));
         }
 
-        // Modèle Minecraft 1.8+
-        // Tête
+        // === MODELE MINECRAFT 1.8+ (proportions exactes) ===
+        // Tête 8x8x8, Y = -12 à -4
         Box(-4, 4, -12, -4, -4, 4,
-            UV(8,8,8,8), UV(24,8,8,8), UV(16,8,8,8),
-            UV(0,8,8,8), UV(8,0,8,8));
+            new(8, 8, 8, 8), new(24, 8, 8, 8), new(16, 8, 8, 8),
+            new(0, 8, 8, 8), new(8, 0, 8, 8), new(16, 0, 8, 8));
 
-        // Corps
+        // Corps 8x12x4, Y = -4 à 8
         Box(-4, 4, -4, 8, -2, 2,
-            UV(20,20,8,12), UV(32,20,8,12), UV(28,20,4,12),
-            UV(16,20,4,12), UV(20,16,8,4));
+            new(20, 20, 8, 12), new(32, 20, 8, 12), new(28, 20, 4, 12),
+            new(16, 20, 4, 12), new(20, 16, 8, 4), new(28, 16, 8, 4));
 
-        // Bras gauche — pivot à l'épaule
-        float laY0 = -4, laY1 = 8;
-        float laRot = -armSwing;
-        float laX0 = -6 + MathF.Sin(laRot) * 1f;
-        float laX1 = -2 + MathF.Sin(laRot) * 1f;
-        float laZ0 = -2 + MathF.Cos(laRot) * -1f;
-        float laZ1 =  2 + MathF.Cos(laRot) * -1f;
-        Box(laX0, laX1, laY0, laY1, laZ0, laZ1,
-            UV(44,20,4,12), UV(52,20,4,12), UV(48,20,4,12),
-            UV(40,20,4,12), UV(44,16,4,4));
-
-        // Bras droit — pivot à l'épaule
-        float raX0 = 2 + MathF.Sin(-laRot) * -1f;
-        float raX1 = 6 + MathF.Sin(-laRot) * -1f;
-        float raZ0 = -2 + MathF.Cos(-laRot) * 1f;
-        float raZ1 =  2 + MathF.Cos(-laRot) * 1f;
-        Box(raX0, raX1, laY0, laY1, raZ0, raZ1,
-            UV(40,52,4,12), UV(48,52,4,12), UV(44,52,4,12),
-            UV(36,52,4,12), UV(44,48,4,4));
-
-        // Jambe gauche — pivot à la hanche
-        float llRot = legSwing;
-        float llX0 = -4 + MathF.Sin(llRot) * 0.5f;
-        float llX1 =  0 + MathF.Sin(llRot) * 0.5f;
-        float llZ0 = -2 + MathF.Cos(llRot) * -0.5f;
-        float llZ1 =  2 + MathF.Cos(llRot) * -0.5f;
-        Box(llX0, llX1, 8, 20, llZ0, llZ1,
-            UV(4,20,4,12), UV(12,20,4,12), UV(8,20,4,12),
-            UV(0,20,4,12), UV(4,16,4,4));
-
-        // Jambe droite
-        float lrRot = -legSwing;
-        float lrX0 = 0 + MathF.Sin(lrRot) * 0.5f;
-        float lrX1 = 4 + MathF.Sin(lrRot) * 0.5f;
-        float lrZ0 = -2 + MathF.Cos(lrRot) * 0.5f;
-        float lrZ1 =  2 + MathF.Cos(lrRot) * 0.5f;
-        Box(lrX0, lrX1, 8, 20, lrZ0, lrZ1,
-            UV(20,52,4,12), UV(28,52,4,12), UV(24,52,4,12),
-            UV(16,52,4,12), UV(20,48,4,4));
-
-        foreach (var f in faces.OrderByDescending(f => f.Depth))
-            TexQuad(g, _skin!, f.Dst, f.Uv);
-    }
-
-    private static RectangleF UV(int x, int y, int w, int h)
-        => new(x, y, w, h);
-
-    private static void TexQuad(Graphics g, Bitmap tex, PointF[] dst, RectangleF uv)
-    {
-        TexTri(g, tex,
-            new PointF(uv.X, uv.Y), new PointF(uv.Right, uv.Y),
-            new PointF(uv.Right, uv.Bottom),
-            dst[0], dst[1], dst[2]);
-        TexTri(g, tex,
-            new PointF(uv.X, uv.Y), new PointF(uv.Right, uv.Bottom),
-            new PointF(uv.X, uv.Bottom),
-            dst[0], dst[2], dst[3]);
-    }
-
-    private static void TexTri(Graphics g, Bitmap tex,
-        PointF s0, PointF s1, PointF s2,
-        PointF d0, PointF d1, PointF d2)
-    {
-        float den = (s1.X - s0.X) * (s2.Y - s0.Y) - (s2.X - s0.X) * (s1.Y - s0.Y);
-        if (MathF.Abs(den) < 1e-4f) return;
-
-        float m11 = ((d1.X - d0.X) * (s2.Y - s0.Y) - (d2.X - d0.X) * (s1.Y - s0.Y)) / den;
-        float m21 = ((d2.X - d0.X) * (s1.X - s0.X) - (d1.X - d0.X) * (s2.X - s0.X)) / den;
-        float m12 = ((d1.Y - d0.Y) * (s2.Y - s0.Y) - (d2.Y - d0.Y) * (s1.Y - s0.Y)) / den;
-        float m22 = ((d2.Y - d0.Y) * (s1.X - s0.X) - (d1.Y - d0.Y) * (s2.X - s0.X)) / den;
-        float dx = d0.X - m11 * s0.X - m21 * s0.Y;
-        float dy = d0.Y - m12 * s0.X - m22 * s0.Y;
-
-        float det = m11 * m22 - m12 * m21;
-        if (MathF.Abs(det) < 1e-9f) return;
-
-        var state = g.Save();
-        try
+        // Bras gauche 4x12x4, pivot épaule Y=-4
         {
-            using (var path = new GraphicsPath())
-            {
-                path.AddPolygon(new[] { d0, d1, d2 });
-                g.SetClip(path);
-            }
-
-            using var matrix = new Matrix(m11, m12, m21, m22, dx, dy);
-            g.Transform = matrix;
-
-            float minX = Math.Min(s0.X, Math.Min(s1.X, s2.X)) - 0.5f;
-            float minY = Math.Min(s0.Y, Math.Min(s1.Y, s2.Y)) - 0.5f;
-            float maxX = Math.Max(s0.X, Math.Max(s1.X, s2.X)) + 0.5f;
-            float maxY = Math.Max(s0.Y, Math.Max(s1.Y, s2.Y)) + 0.5f;
-
-            g.InterpolationMode = InterpolationMode.NearestNeighbor;
-            g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.DrawImage(tex,
-                new RectangleF(minX, minY, maxX - minX, maxY - minY),
-                new RectangleF(minX, minY, maxX - minX, maxY - minY),
-                GraphicsUnit.Pixel);
+            float rot = -armSwing;
+            float ox = MathF.Sin(rot) * 3f, oz = MathF.Cos(rot) * -1f;
+            Box(-6 + ox, -2 + ox, -4, 8, -2 + oz, 2 + oz,
+                new(44, 20, 4, 12), new(52, 20, 4, 12), new(48, 20, 4, 12),
+                new(40, 20, 4, 12), new(44, 16, 4, 4), new(48, 16, 4, 4));
         }
-        catch (ArgumentException) { }
-        finally { g.Restore(state); }
+
+        // Bras droit 4x12x4
+        {
+            float rot = armSwing;
+            float ox = MathF.Sin(rot) * -3f, oz = MathF.Cos(rot) * 1f;
+            Box(2 + ox, 6 + ox, -4, 8, -2 + oz, 2 + oz,
+                new(40, 52, 4, 12), new(48, 52, 4, 12), new(44, 52, 4, 12),
+                new(36, 52, 4, 12), new(44, 48, 4, 4), new(48, 48, 4, 4));
+        }
+
+        // Jambe gauche 4x12x4, pivot hanche Y=8
+        {
+            float ox = MathF.Sin(legSwing) * 2f, oz = MathF.Cos(legSwing) * -1f;
+            Box(-4 + ox, ox, 8, 20, -2 + oz, 2 + oz,
+                new(4, 20, 4, 12), new(12, 20, 4, 12), new(8, 20, 4, 12),
+                new(0, 20, 4, 12), new(4, 16, 4, 4), new(8, 16, 4, 4));
+        }
+
+        // Jambe droite 4x12x4
+        {
+            float ox = MathF.Sin(-legSwing) * -2f, oz = MathF.Cos(-legSwing) * 1f;
+            Box(ox, 4 + ox, 8, 20, -2 + oz, 2 + oz,
+                new(20, 52, 4, 12), new(28, 52, 4, 12), new(24, 52, 4, 12),
+                new(16, 52, 4, 12), new(20, 48, 4, 4), new(24, 48, 4, 4));
+        }
+
+        // Dessiner de l'arrière vers l'avant (painter's algorithm)
+        foreach (var (pts, color, depth) in faces.OrderByDescending(f => f.depth))
+        {
+            using var brush = new SolidBrush(color);
+            g.FillPolygon(brush, pts);
+            using var pen = new Pen(ControlPaint.Dark(color, 0.2f), 0.7f);
+            g.DrawPolygon(pen, pts);
+        }
+
+        // Overlay texte
+        using var infoFont = new Font("Consolas", 8f);
+        TextRenderer.DrawText(g, "Glisser = tourner | Molette = zoom",
+            infoFont, new Point(4, 4), Color.FromArgb(100, 200, 200, 200));
+    }
+
+    private static Color ShiftBrightness(Color c, float shift)
+    {
+        int r = Math.Clamp((int)(c.R * (1f + shift)), 0, 255);
+        int g = Math.Clamp((int)(c.G * (1f + shift)), 0, 255);
+        int b = Math.Clamp((int)(c.B * (1f + shift)), 0, 255);
+        return Color.FromArgb(c.A, r, g, b);
+    }
+
+    // === Mouse ===
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (e.Button is MouseButtons.Left or MouseButtons.Right)
+        {
+            _dragging = true;
+            _lastMouse = e.Location;
+            _timer.Stop();
+        }
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (!_dragging) return;
+        _rotY += (e.X - _lastMouse.X) * 0.01f;
+        _rotX = Math.Clamp(_rotX + (e.Y - _lastMouse.Y) * 0.01f, -1f, 1f);
+        _lastMouse = e.Location;
+        Invalidate();
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        _dragging = false;
+        if (_skin != null && !_walking) _timer.Start();
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        base.OnMouseWheel(e);
+        _zoom = Math.Clamp(_zoom + e.Delta * 0.001f, 0.3f, 3f);
+        Invalidate();
     }
 
     protected override void Dispose(bool disposing)

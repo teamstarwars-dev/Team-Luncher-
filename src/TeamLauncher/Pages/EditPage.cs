@@ -41,15 +41,19 @@ public class EditPage : UserControl, IRefreshable
             AutoSize = true
         };
 
+        Theme.ApplyInput(picker);
         picker.DropDownStyle = ComboBoxStyle.DropDownList;
         picker.Width = 320;
         picker.SelectedIndexChanged += (_, _) => LoadSelected();
 
+        Theme.ApplyInput(nameBox);
         nameBox.Width = 420;
         nameBox.Font = new Font("Segoe UI", 11f);
+        Theme.ApplyInput(descBox);
         descBox.Width = 420;
         descBox.Height = 70;
         descBox.Multiline = true;
+        Theme.ApplyInput(imageBox);
         imageBox.Width = 420;
 
         var imgBtn = new Button { Text = Lang.T("Choisir une image...", "Choose an image..."), Width = 200, Height = 36 };
@@ -71,6 +75,10 @@ public class EditPage : UserControl, IRefreshable
 
         root.Controls.Add(title);
         root.Controls.Add(hint);
+        Theme.ApplyInput(loaderBox);
+        Theme.ApplyInput(versionBox);
+        Theme.ApplyInput(ramBox);
+        Theme.ApplyInput(notesBox);
         root.Controls.Add(EditLabel("Instance à modifier"));
         root.Controls.Add(picker);
         root.Controls.Add(EditLabel("Nom"));

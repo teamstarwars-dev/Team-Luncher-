@@ -72,6 +72,14 @@ public class AppSettings
     public List<TeamCity> Cities { get; set; } = new();
     public List<HostedServer> HostedServers { get; set; } = new();
     public bool AutoShortcut { get; set; } = false;
+
+    // ---- VPS / Pterodactyl ----
+    public string VpsUrl { get; set; } = "";        // URL du panel Pterodactyl (ex: https://panel.monsite.com)
+    public string VpsApiKey { get; set; } = "";      // Clé API Client Pterodactyl
+
+    // ---- Télémétrie ----
+    public bool TelemetryEnabled { get; set; } = true;  // Rapports de crash/stats vers Discord
+    public string DiscordTelemetryWebhook { get; set; } = ""; // Webhook Discord pour les logs distants
 }
 
 public interface IRefreshable
@@ -97,4 +105,7 @@ public static class AppEvents
 
     /// <summary>Onglet à ouvrir dans la page Détails (ex: "🧩 Mods", "🌍 Mondes").</summary>
     public static string? PendingDetailTab { get; set; }
+
+    /// <summary>Serveur à ouvrir dans le panneau de gestion ServerPanel.</summary>
+    public static string? PendingServerId { get; set; }
 }

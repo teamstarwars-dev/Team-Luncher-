@@ -37,12 +37,12 @@ public class InstancesPage : UserControl, IRefreshable
             ForeColor = Theme.TextDim,
             Font = new Font("Segoe UI", 9.5f),
             AutoSize = true,
-            Location = new Point(0, 28)
+            Location = new Point(0, 34)
         };
 
         var createBtn = new Button { Text = "+ Nouvelle instance", Width = 170, Height = 32 };
         Theme.Apply(createBtn, primary: true);
-        createBtn.Location = new Point(0, 64);
+        createBtn.Location = new Point(0, 76);
         createBtn.Click += (_, _) =>
         {
             using var dlg = new CreateInstanceDialog();
@@ -52,7 +52,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var moreBtn = new Button { Text = Lang.T("Plus d'actions  ▾", "More actions  ▾"), Width = 150, Height = 32, Margin = new Padding(8, 0, 0, 0) };
         Theme.Apply(moreBtn);
-        moreBtn.Location = new Point(178, 64);
+        moreBtn.Location = new Point(178, 76);
         moreBtn.Click += (_, _) => BuildActionsMenu(moreBtn).Show(moreBtn, new Point(0, moreBtn.Height));
 
         filterBox = new TextBox
@@ -61,20 +61,21 @@ public class InstancesPage : UserControl, IRefreshable
             Height = 30,
             Font = new Font("Segoe UI", 10f),
             PlaceholderText = Lang.T("Rechercher…", "Search…"),
-            Location = new Point(0, 110)
+            Location = new Point(0, 128)
         };
+        Theme.ApplyInput(filterBox);
         filterBox.TextChanged += (_, _) => RefreshData();
 
         emptyLabel.ForeColor = Theme.TextDim;
         emptyLabel.Font = new Font("Segoe UI", 9.5f);
         emptyLabel.AutoSize = true;
-        emptyLabel.Location = new Point(0, 158);
+        emptyLabel.Location = new Point(0, 176);
         emptyLabel.Visible = false;
 
         cardsFlow.AutoSize = true;
         cardsFlow.FlowDirection = FlowDirection.LeftToRight;
         cardsFlow.WrapContents = true;
-        cardsFlow.Location = new Point(0, 158);
+        cardsFlow.Location = new Point(0, 176);
 
         root.Controls.Add(title);
         root.Controls.Add(hint);
@@ -394,7 +395,7 @@ public class InstancesPage : UserControl, IRefreshable
 
         var zipBtn = new Button
         {
-            Text = "📦  Exporter en .zip",
+            Text = "📦  Exporter en .zip (complet)",
             Size = new Size(370, 44),
             Location = new Point(16, 52),
             FlatStyle = FlatStyle.Flat,
@@ -407,7 +408,7 @@ public class InstancesPage : UserControl, IRefreshable
         };
         zipBtn.FlatAppearance.BorderSize = 0;
         zipBtn.FlatAppearance.MouseOverBackColor = Theme.Hover;
-        zipBtn.Click += (_, _) =>
+        zipBtn.Click += async (_, _) =>
         {
             dlg.Close();
             using var save = new SaveFileDialog
@@ -418,10 +419,17 @@ public class InstancesPage : UserControl, IRefreshable
             if (save.ShowDialog(FindForm()) != DialogResult.OK) return;
             try
             {
-                PackService.Export(inst, save.FileName);
-                MessageBox.Show($"Modpack exporté :\n{save.FileName}", "Team Launcher");
+                zipBtn.Text = "⏳ Création de l'archive…";
+                zipBtn.Enabled = false;
+                await PackShareService.ExportZipAsync(inst, save.FileName,
+                    step => BeginInvoke(() => zipBtn.Text = step.Length > 40 ? step[..40] + "…" : step));
+                MessageBox.Show(
+                    $"Modpack complet exporté :\n{save.FileName}\n\n" +
+                    "Ce zip contient : mods, shaders, configs, mondes, resource packs.",
+                    "Team Launcher");
             }
             catch (Exception ex) { MessageBox.Show(ex.Message, "Team Launcher"); }
+            finally { zipBtn.Text = "📦  Exporter en .zip (complet)"; zipBtn.Enabled = true; }
         };
 
         var codeBtn = new Button
@@ -442,29 +450,35 @@ public class InstancesPage : UserControl, IRefreshable
         codeBtn.Click += async (_, _) =>
         {
             codeBtn.Enabled = false;
-            codeBtn.Text = "Analyse des mods…";
+            codeBtn.Text = "Analyse du modpack…";
             try
             {
-                var (pack, recognized) = await PackShareService.ExportAsync(inst,
+                var (pack, recognizedMods, recognizedShaders) = await PackShareService.ExportAsync(inst,
                     step => BeginInvoke(() => codeBtn.Text = step.Length > 40 ? step[..40] + "…" : step));
                 string json = PackShareService.Serialize(pack);
                 string code = GenerateShareCode(pack);
 
-                using                 var resultDlg = new Form
+                using var resultDlg = new Form
                 {
                     Text = Lang.T("Code de partage", "Share code"),
-                    Size = new Size(520, 300),
+                    Size = new Size(520, 360),
                     FormBorderStyle = FormBorderStyle.FixedDialog,
                     StartPosition = FormStartPosition.CenterParent,
                     MaximizeBox = false,
                     BackColor = Theme.Panel
                 };
 
+                int totalItems = pack.Mods.Count + pack.Shaders.Count;
+                int totalRecognized = recognizedMods + recognizedShaders;
                 var infoLbl = new Label
                 {
-                    Text = $"{recognized}/{pack.Mods.Count} mods reconnus sur Modrinth.",
+                    Text = $"📦 {pack.Mods.Count} mods ({recognizedMods} reconnus)  •  " +
+                           $"🌈 {pack.Shaders.Count} shaders ({recognizedShaders} reconnus)  •  " +
+                           $"📁 {pack.Configs.Count} configs  •  " +
+                           $"🌍 {pack.Worlds.Count} fichiers monde  •  " +
+                           $"🎨 {pack.ResourcePacks.Count} resource packs",
                     ForeColor = Theme.Text,
-                    Font = new Font("Segoe UI", 9.5f),
+                    Font = new Font("Segoe UI", 8.5f),
                     Location = new Point(16, 12),
                     AutoSize = true
                 };
@@ -552,10 +566,10 @@ public class InstancesPage : UserControl, IRefreshable
     /// <summary>Génère un code court type CurseForge (ex: "IGSTtI-m") à partir des mods du pack.</summary>
     private static string GenerateShareCode(PackShareService.SharedPack pack)
     {
-        // Encoder les hashes SHA1 des mods en un bloc compact
+        // Encoder les hashes SHA1 de tous les fichiers (mods + shaders)
         var sb = new StringBuilder();
-        foreach (var mod in pack.Mods.Where(m => m.Sha1.Length > 0).OrderBy(m => m.Sha1))
-            sb.Append(mod.Sha1[..8]); // 8 caractères par mod
+        foreach (var item in pack.Mods.Concat(pack.Shaders).Where(m => m.Sha1.Length > 0).OrderBy(m => m.Sha1))
+            sb.Append(item.Sha1[..8]);
 
         if (sb.Length == 0)
         {
@@ -666,6 +680,42 @@ public class InstancesPage : UserControl, IRefreshable
 
     private void PackService_Duplicate(InstanceInfo inst) => InstanceTools.Duplicate(inst);
 
+    private void DeleteInstance(InstanceInfo inst)
+    {
+        var result = MessageBox.Show(
+            $"Supprimer l'instance « {inst.Name} » ?\n\n" +
+            "Tous les fichiers (mods, mondes, configurations) seront définitivement supprimés.",
+            "Team Launcher — Supprimer une instance",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        if (result != DialogResult.Yes) return;
+
+        try
+        {
+            // Supprimer le dossier de l'instance
+            string instDir = Path.Combine(DataStore.InstancesRoot, inst.Id);
+            if (Directory.Exists(instDir))
+                Directory.Delete(instDir, recursive: true);
+
+            // Supprimer de la liste et sauvegarder
+            DataStore.Settings.Instances.Remove(inst);
+            DataStore.Save();
+
+            // Télémétrie
+            TelemetryService.ReportInstanceDeleted(inst);
+
+            RefreshData();
+            Notifier.Show("Instance supprimée", $"« {inst.Name} » a été supprimée.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "Erreur lors de la suppression :\n" + ex.Message,
+                "Team Launcher");
+        }
+    }
+
     private void SharePack(object? sender, EventArgs e)
     {
         using var pick = new InstancePickDialog("Partager quelle instance ?", "Partager");
@@ -675,7 +725,7 @@ public class InstancesPage : UserControl, IRefreshable
         Notifier.Show("Partage de pack", "Analyse des mods en cours…");
         Task.Run(async () =>
         {
-            var (pack, recognized) = await PackShareService.ExportAsync(inst,
+            var (pack, recognizedMods, recognizedShaders) = await PackShareService.ExportAsync(inst,
                 step => BeginInvoke(() => filterBox.PlaceholderText = step));
             string json = PackShareService.Serialize(pack);
             BeginInvoke(() =>
@@ -686,8 +736,9 @@ public class InstancesPage : UserControl, IRefreshable
                 filterBox.PlaceholderText = "Rechercher…";
                 MessageBox.Show(
                     $"« {inst.Name} » copié dans le presse-papiers !\n\n" +
-                    $"{recognized}/{pack.Mods.Count} mods reconnus sur Modrinth.\n" +
-                    "Colle le texte tel quel dans Discord : les autres membres n'auront qu'à faire « Importer un pack partagé ».",
+                    $"📦 {recognizedMods}/{pack.Mods.Count} mods reconnus\n" +
+                    $"🌈 {recognizedShaders}/{pack.Shaders.Count} shaders reconnus\n" +
+                    "Colle le texte dans Discord : les autres font « Importer un pack partagé ».",
                     "Team Launcher");
             });
         }).ContinueWith(t =>
@@ -967,6 +1018,26 @@ public class InstancesPage : UserControl, IRefreshable
         imgPanel.Controls.Add(shareBtn);
         shareBtn.BringToFront();
 
+        // ---- Bouton supprimer (X) ----
+        var deleteBtn = new Button
+        {
+            Text = "✕",
+            Size = new Size(26, 26),
+            Location = new Point(cardW - 88, 4),
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 9f),
+            ForeColor = Theme.TextDim,
+            BackColor = Color.FromArgb(160, Theme.Card),
+            Cursor = Cursors.Hand
+        };
+        deleteBtn.FlatAppearance.BorderSize = 0;
+        deleteBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(200, 50, 50);
+        deleteBtn.MouseEnter += (_, _) => deleteBtn.ForeColor = Color.White;
+        deleteBtn.MouseLeave += (_, _) => deleteBtn.ForeColor = Theme.TextDim;
+        deleteBtn.Click += (_, _) => DeleteInstance(inst);
+        imgPanel.Controls.Add(deleteBtn);
+        deleteBtn.BringToFront();
+
         // ---- Nom ----
         var nameLabel = new Label
         {
@@ -1076,6 +1147,10 @@ public class CreateInstanceDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         BackColor = Theme.Panel;
 
+        Theme.ApplyInput(nameBox);
+        Theme.ApplyInput(descBox);
+        Theme.ApplyInput(loaderBox);
+        Theme.ApplyInput(versionBox);
         loaderBox.Items.AddRange(new object[] { "Vanilla", "Forge", "Fabric", "NeoForge", "Quilt" });
         loaderBox.SelectedIndex = 0;
 

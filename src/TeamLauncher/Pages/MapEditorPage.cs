@@ -45,6 +45,7 @@ public class MapEditorPage : UserControl, IRefreshable
         // ---- Instance selector ----
         var row1 = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 12, 0, 0) };
         var instLabel = new Label { Text = Lang.T("Instance :", "Instance:"), ForeColor = Theme.TextDim, AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
+        Theme.ApplyInput(instanceBox);
         instanceBox.Width = 280; instanceBox.Font = new Font("Segoe UI", 10f);
         row1.Controls.Add(instLabel);
         row1.Controls.Add(instanceBox);
@@ -70,7 +71,78 @@ public class MapEditorPage : UserControl, IRefreshable
         tools.Controls.Add(MkBtn("✖ Tout désélectionner", false, (_, _) => { canvas.ClearSelection(); UpdateStats(); }));
         tools.Controls.Add(MkBtn("💾 Sauvegarder le monde", false, (_, _) => BackupWorld()));
         tools.Controls.Add(MkBtn("🏙 Générer une ville (OSM)", false, (_, _) => GenerateCityNative()));
-        tools.Controls.Add(MkBtn("⟳ Actualiser", false, (_, _) => { LoadWorldList(); LoadWorldChunks(); }));
+        tools.Controls.Add(MkBtn("⟳ Actualiser", false, async (_, _) => { LoadWorldList(); await LoadWorldChunksAsync(); }));
+
+        // ---- WorldEdit toolbar ----
+        var wePanel = new Panel { Height = 42, Margin = new Padding(0, 4, 0, 0) };
+
+        var weBlockBox = new TextBox
+        {
+            Width = 220, Font = new Font("Consolas", 10f),
+            PlaceholderText = "minecraft:stone",
+            Location = new Point(0, 9)
+        };
+        Theme.ApplyInput(weBlockBox);
+
+        var mkWeBtn = (string text, Func<Task> action) =>
+        {
+            var b = new Button { Text = text, Width = 120, Height = 32, Font = new Font("Segoe UI", 8.5f) };
+            Theme.Apply(b);
+            b.Click += async (_, _) =>
+            {
+                try { await action(); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "Team Launcher"); }
+            };
+            return b;
+        };
+
+        int weX = 230;
+        var weButtons = new (string Text, Func<Task> Action)[]
+        {
+            ("//set", async () =>
+            {
+                int c = await canvas.SetBlocksAsync(weBlockBox.Text.Trim().Length > 0 ? weBlockBox.Text.Trim() : "minecraft:stone");
+                UpdateStats($"//set : {c} blocs placés.");
+            }),
+            ("//replace", async () =>
+            {
+                string from = Microsoft.VisualBasic.Interaction.InputBox(
+                    "Remplacer quel bloc ? (* = tous les blocs non-air)", "//replace", "*");
+                if (string.IsNullOrWhiteSpace(from)) return;
+                int c = await canvas.ReplaceBlocksAsync(from.Trim(), weBlockBox.Text.Trim().Length > 0 ? weBlockBox.Text.Trim() : "minecraft:stone");
+                UpdateStats($"//replace : {c} blocs remplacés.");
+            }),
+            ("//copy", async () =>
+            {
+                await canvas.CopyAsync();
+                UpdateStats("//copy : sélection copiée.");
+            }),
+            ("//paste", async () =>
+            {
+                int c = await canvas.PasteAsync();
+                UpdateStats($"//paste : {c} blocs collés.");
+            }),
+            ("//undo", async () =>
+            {
+                await canvas.UndoAsync();
+                UpdateStats("//undo : annulé.");
+            }),
+            ("//redo", async () =>
+            {
+                await canvas.RedoAsync();
+                UpdateStats("//redo : rétabli.");
+            }),
+        };
+
+        foreach (var (text, action) in weButtons)
+        {
+            var btn = mkWeBtn(text, action);
+            btn.Location = new Point(weX, 5);
+            wePanel.Controls.Add(btn);
+            weX += 126;
+        }
+
+        canvas.OnWorldEditStatus += msg => UpdateStats(msg);
 
         statsLabel.ForeColor = Theme.Text;
         statsLabel.Font = new Font("Consolas", 9.5f);
@@ -150,6 +222,7 @@ public class MapEditorPage : UserControl, IRefreshable
         viewTabs.TabPages.AddRange(new[] { editorPage, viewer3dPage, modelPage });
 
         root.Controls.Add(tools);
+        root.Controls.Add(wePanel);
         root.Controls.Add(statsLabel);
         root.Controls.Add(viewTabs);
         Controls.Add(root);
@@ -221,12 +294,14 @@ public class MapEditorPage : UserControl, IRefreshable
             Location = new Point(40, 16),
             PlaceholderText = "Nom de la ville (ex: Paris, Lyon, Marseille)"
         };
+        Theme.ApplyInput(nameBox);
         var bboxBox = new TextBox
         {
             Width = 400, Font = new Font("Consolas", 10f),
             Location = new Point(40, 56),
             PlaceholderText = "Bounding box (min_lon,min_lat,max_lon,max_lat)"
         };
+        Theme.ApplyInput(bboxBox);
         var hint = new Label
         {
             Text = "Ex: Paris = 2.35,48.86,2.35,48.86  |  Trouve les coordonnées sur openstreetmap.org",
@@ -361,7 +436,7 @@ public class MapEditorPage : UserControl, IRefreshable
         UpdateStats($"{dirs.Length} monde(s).");
     }
 
-    private void SelectWorld(string worldPath, Panel card)
+    private async void SelectWorld(string worldPath, Panel card)
     {
         _selectedWorld = worldPath;
 
@@ -376,27 +451,33 @@ public class MapEditorPage : UserControl, IRefreshable
                     l.ForeColor = ReferenceEquals(c, card) ? Color.White : Theme.Text;
         }
 
-        LoadWorldChunks();
+        await LoadWorldChunksAsync();
     }
 
-    private void LoadWorldChunks()
+    private async Task LoadWorldChunksAsync()
     {
         string? worldPath = _selectedWorld;
         if (worldPath == null)
         {
             canvas.LoadRegions(null);
-            worldViewer3D.LoadWorld(null!);
+            worldViewer3D.LoadWorldClear();
             UpdateStats("Sélectionne un monde.");
             return;
         }
         try
         {
-            canvas.LoadRegions(worldPath);
-            worldViewer3D.LoadWorld(worldPath);
+            UpdateStats($"Chargement de « {Path.GetFileName(worldPath)} »...");
+            Cursor = Cursors.WaitCursor;
+
+            await Task.Run(() => canvas.LoadRegions(worldPath));
+            await worldViewer3D.LoadWorldAsync(worldPath,
+                step => BeginInvoke(() => UpdateStats(step)));
+
             string name = Path.GetFileName(worldPath);
             UpdateStats($"« {name} » chargé — {canvas.TotalChunks:N0} chunks trouvés. Glisse pour sélectionner.");
         }
         catch (Exception ex) { UpdateStats("Erreur : " + ex.Message); }
+        finally { Cursor = Cursors.Default; }
     }
 
     private void UpdateStats(string? text = null)

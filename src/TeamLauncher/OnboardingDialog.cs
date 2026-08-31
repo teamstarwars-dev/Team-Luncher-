@@ -76,13 +76,14 @@ public class OnboardingDialog : Form
 
     private void ShowStep()
     {
-        dots.Text = step switch { 0 => "● ○ ○", 1 => "○ ● ○", _ => "○ ○ ●" };
+        dots.Text = step switch { 0 => "● ○ ○ ○", 1 => "○ ● ○ ○", 2 => "○ ○ ● ○", _ => "○ ○ ○ ●" };
         stepPanel.Controls.Clear();
         switch (step)
         {
             case 0: BuildWelcome(); break;
             case 1: BuildAccount(); break;
-            default: BuildImport(); break;
+            case 2: BuildImport(); break;
+            default: BuildShareCode(); break;
         }
     }
 
@@ -157,7 +158,9 @@ public class OnboardingDialog : Form
             Location = new Point((stepPanel.Width - 220) / 2, 128)
         };
 
+        Theme.ApplyInput(pseudoBox);
         pseudoBox.Font = new Font("Segoe UI", 11f);
+        Theme.ApplyInput(pseudoBox);
         pseudoBox.Size = new Size(380, 30);
         pseudoBox.Location = new Point((stepPanel.Width - 380) / 2, 168);
         pseudoBox.PlaceholderText = "Ton pseudo pour le mode hors-ligne";
@@ -252,7 +255,7 @@ public class OnboardingDialog : Form
         stepPanel.Controls.Add(foundList);
         stepPanel.Controls.Add(importStatusLabel);
 
-        nextBtn.Text = "Importer et terminer";
+        nextBtn.Text = "Importer et continuer";
         nextBtn.Click -= ImportHandlerAsync;
         nextBtn.Click += ImportHandlerAsync;
     }
@@ -275,9 +278,9 @@ public class OnboardingDialog : Form
             }
         }
 
-        DataStore.Settings.OnboardingDone = true;
-        DataStore.Save();
-        DialogResult = DialogResult.OK;
+        // Passer à l'étape code de partage
+        step++;
+        ShowStep();
     }
 
     /// <summary>Une instance plausible contient au moins un marqueur de jeu.</summary>
@@ -344,7 +347,137 @@ public class OnboardingDialog : Form
             CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
     }
 
-    // ---------------- helpers ----------------
+    // ---------------- étape 4 : code de partage ----------------
+
+    private void BuildShareCode()
+    {
+        nextBtn.Visible = true;
+
+        var title = MkTitle(Lang.T("Rejoins ton équipe !", "Join your team!"));
+        title.Location = new Point(0, 4);
+        stepPanel.Controls.Add(title);
+
+        var hint = MkText(
+            Lang.T(
+                "Un membre de ta team t'a envoyé un code de partage ?\n" +
+                "Colle-le ci-dessous pour télécharger le modpack complet\n" +
+                "(mods, shaders, configs, mondes).\n\n" +
+                "Tu peux aussi passer et créer ton propre modpack plus tard.",
+                "A team member sent you a share code?\n" +
+                "Paste it below to download the full modpack\n" +
+                "(mods, shaders, configs, worlds).\n\n" +
+                "You can skip this and create your own modpack later."),
+            9.5f);
+        hint.Location = new Point(0, 38);
+        stepPanel.Controls.Add(hint);
+
+        var codeBox = new TextBox
+        {
+            Font = new Font("Consolas", 13f, FontStyle.Bold),
+            Size = new Size(500, 36),
+            Location = new Point(0, 180),
+            BackColor = Theme.Card,
+            ForeColor = Theme.Accent,
+            BorderStyle = BorderStyle.FixedSingle,
+            PlaceholderText = Lang.T("Colle le code ici…", "Paste the code here…")
+        };
+        codeBox.KeyPress += (_, e) =>
+        {
+            if (e.KeyChar == (char)13) { ImportFromCode(codeBox.Text.Trim()); e.Handled = true; }
+        };
+        stepPanel.Controls.Add(codeBox);
+
+        var importBtn = new Button
+        {
+            Text = Lang.T("📥  Importer le modpack", "📥  Import modpack"),
+            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            Size = new Size(260, 42),
+            Location = new Point(0, 228)
+        };
+        Theme.Apply(importBtn, primary: true);
+        importBtn.Click += (_, _) => ImportFromCode(codeBox.Text.Trim());
+        stepPanel.Controls.Add(importBtn);
+
+        var skipLbl = new Label
+        {
+            Text = Lang.T(
+                "Pas de code ? Pas de souci, tu pourras importer un pack depuis\n" +
+                "Instances → clic droit → Importer un pack partagé.",
+                "No code? No worries, you can import a pack later from\n" +
+                "Instances → right click → Import shared pack."),
+            ForeColor = Theme.TextDim,
+            Font = new Font("Segoe UI", 8.5f),
+            AutoSize = true,
+            Location = new Point(0, 280)
+        };
+        stepPanel.Controls.Add(skipLbl);
+
+        nextBtn.Text = Lang.T("Terminer", "Finish");
+        nextBtn.Click -= FinishHandler;
+        nextBtn.Click += FinishHandler;
+    }
+
+    private Label? _codeStatus;
+
+    private void ImportFromCode(string code)
+    {
+        if (code.Length == 0)
+        {
+            MessageBox.Show(
+                Lang.T("Colle un code de partage dans le champ.", "Paste a share code in the field."),
+                "Team Launcher");
+            return;
+        }
+
+        // Afficher le statut
+        if (_codeStatus == null)
+        {
+            _codeStatus = new Label
+            {
+                ForeColor = Theme.Accent,
+                Font = new Font("Segoe UI", 9f),
+                AutoSize = true,
+                Location = new Point(0, 310)
+            };
+            stepPanel.Controls.Add(_codeStatus);
+        }
+        _codeStatus.Text = Lang.T("⏳ Import en cours…", "⏳ Importing…");
+
+        nextBtn.Enabled = false;
+        Task.Run(async () =>
+        {
+            try
+            {
+                var inst = await PackShareService.ImportAsync(code,
+                    step => BeginInvoke(() => _codeStatus.Text = step));
+                BeginInvoke(() =>
+                {
+                    _codeStatus.ForeColor = Color.FromArgb(80, 200, 120);
+                    _codeStatus.Text = Lang.T(
+                        $"✓ « {inst.Name} » importé avec succès !",
+                        $"✓ \"{inst.Name}\" imported successfully!");
+                    nextBtn.Enabled = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                BeginInvoke(() =>
+                {
+                    _codeStatus.ForeColor = Color.FromArgb(220, 80, 80);
+                    _codeStatus.Text = Lang.T("✕ Échec : " + ex.Message, "✕ Failed: " + ex.Message);
+                    nextBtn.Enabled = true;
+                });
+            }
+        });
+    }
+
+    private void FinishHandler(object? s, EventArgs e)
+    {
+        nextBtn.Click -= FinishHandler;
+        DataStore.Settings.OnboardingDone = true;
+        DataStore.Save();
+        DialogResult = DialogResult.OK;
+    }
 
     private static Label MkTitle(string text) => new()
     {

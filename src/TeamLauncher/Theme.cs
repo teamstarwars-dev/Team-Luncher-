@@ -138,6 +138,32 @@ public static class Theme
         Round(b, 5);
     }
 
+    /// <summary>Applique le style sombre à un TextBox.</summary>
+    public static void ApplyInput(TextBox t)
+    {
+        t.BackColor = Card;
+        t.ForeColor = Text;
+        t.BorderStyle = BorderStyle.FixedSingle;
+        t.Font = new Font("Segoe UI", 9.5f);
+    }
+
+    /// <summary>Applique le style sombre à un ComboBox.</summary>
+    public static void ApplyInput(ComboBox c)
+    {
+        c.BackColor = Card;
+        c.ForeColor = Text;
+        c.FlatStyle = FlatStyle.Flat;
+        c.Font = new Font("Segoe UI", 9.5f);
+    }
+
+    /// <summary>Applique le style sombre à un NumericUpDown.</summary>
+    public static void ApplyInput(NumericUpDown n)
+    {
+        n.BackColor = Card;
+        n.ForeColor = Text;
+        n.Font = new Font("Segoe UI", 9.5f);
+    }
+
     private static Color OnColor(Color bg) =>
         (bg.R * 299 + bg.G * 587 + bg.B * 114) / 1000 > 150
             ? Color.FromArgb(18, 20, 16)

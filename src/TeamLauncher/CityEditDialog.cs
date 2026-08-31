@@ -5,10 +5,10 @@ public class CityEditDialog : Form
 {
     public TeamCity City { get; private set; } = new();
 
-    private readonly TextBox nameBox = new() { Width = 400, Font = new Font("Segoe UI", 10f), BorderStyle = BorderStyle.FixedSingle, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "Ex : Valmont" };
-    private readonly TextBox ownerBox = new() { Width = 400, Font = new Font("Segoe UI", 10f), BorderStyle = BorderStyle.FixedSingle, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "Ton pseudo" };
-    private readonly TextBox addressBox = new() { Width = 400, Font = new Font("Consolas", 10f), BorderStyle = BorderStyle.FixedSingle, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "ville.rp-team.fr" };
-    private readonly TextBox descBox = new() { Width = 400, Font = new Font("Segoe UI", 10f), BorderStyle = BorderStyle.FixedSingle, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "Ville portuaire médiévale…" };
+    private readonly TextBox nameBox = new() { Width = 400, Font = new Font("Segoe UI", 10f), BorderStyle = BorderStyle.None, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "Ex : Valmont", Padding = new Padding(4) };
+    private readonly TextBox ownerBox = new() { Width = 400, Font = new Font("Segoe UI", 10f), BorderStyle = BorderStyle.None, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "Ton pseudo", Padding = new Padding(4) };
+    private readonly TextBox addressBox = new() { Width = 400, Font = new Font("Consolas", 10f), BorderStyle = BorderStyle.None, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "ville.rp-team.fr", Padding = new Padding(4) };
+    private readonly TextBox descBox = new() { Width = 400, Font = new Font("Segoe UI", 10f), BorderStyle = BorderStyle.None, BackColor = Theme.Card, ForeColor = Theme.Text, PlaceholderText = "Ville portuaire médiévale…", Padding = new Padding(4) };
 
     public CityEditDialog(TeamCity? existing = null)
     {

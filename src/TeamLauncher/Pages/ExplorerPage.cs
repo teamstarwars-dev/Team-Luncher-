@@ -80,9 +80,10 @@ public class ExplorerPage : UserControl, IRefreshable
         addressBox.Location = new Point(84, 5);
         addressBox.Height = 30;
         addressBox.Font = new Font("Consolas", 9.5f);
-        addressBox.BorderStyle = BorderStyle.FixedSingle;
+        addressBox.BorderStyle = BorderStyle.None;
         addressBox.BackColor = Theme.Card;
         addressBox.ForeColor = Theme.Text;
+        addressBox.Padding = new Padding(4);
         addressBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         addressBox.KeyDown += (_, e) =>
         {

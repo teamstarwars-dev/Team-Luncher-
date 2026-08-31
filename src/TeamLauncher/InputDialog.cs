@@ -36,7 +36,8 @@ public sealed class InputDialog : Form
             Font = new Font("Segoe UI", 10f),
             BackColor = Theme.Card,
             ForeColor = Theme.Text,
-            BorderStyle = BorderStyle.FixedSingle
+            BorderStyle = BorderStyle.None,
+            Padding = new Padding(4)
         };
         box.SelectAll();
         box.KeyDown += (_, e) =>

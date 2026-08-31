@@ -143,8 +143,9 @@ public static class Theme
     {
         t.BackColor = Card;
         t.ForeColor = Text;
-        t.BorderStyle = BorderStyle.FixedSingle;
+        t.BorderStyle = BorderStyle.None;
         t.Font = new Font("Segoe UI", 9.5f);
+        t.Padding = new Padding(4);
     }
 
     /// <summary>Applique le style sombre à un ComboBox.</summary>
@@ -162,6 +163,15 @@ public static class Theme
         n.BackColor = Card;
         n.ForeColor = Text;
         n.Font = new Font("Segoe UI", 9.5f);
+    }
+
+    /// <summary>Applique le style sombre à un TabControl (supprime les bordures blanches).</summary>
+    public static void ApplyTab(TabControl t)
+    {
+        t.Appearance = TabAppearance.FlatButtons;
+        t.BackColor = Bg;
+        t.ForeColor = Text;
+        t.DrawMode = TabDrawMode.OwnerDrawFixed;
     }
 
     private static Color OnColor(Color bg) =>

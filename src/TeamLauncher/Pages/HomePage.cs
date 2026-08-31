@@ -69,9 +69,10 @@ public class HomePage : UserControl, IRefreshable
         searchBox.Width = 280;
         searchBox.Height = 30;
         searchBox.Font = new Font("Segoe UI", 10f);
-        searchBox.BorderStyle = BorderStyle.FixedSingle;
+        searchBox.BorderStyle = BorderStyle.None;
         searchBox.BackColor = Theme.Card;
         searchBox.ForeColor = Theme.Text;
+        searchBox.Padding = new Padding(4);
         searchBox.PlaceholderText = "Rechercher…";
         searchBox.Location = new Point(0, 210);
         searchBox.TextChanged += (_, _) => RefreshData();

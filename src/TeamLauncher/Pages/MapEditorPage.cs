@@ -153,12 +153,12 @@ public class MapEditorPage : UserControl, IRefreshable
         var viewTabs = new TabControl
         {
             Dock = DockStyle.Fill,
-            DrawMode = TabDrawMode.OwnerDrawFixed,
             ItemSize = new Size(160, 30),
             Font = new Font("Segoe UI", 8.75f),
             Padding = new Point(10, 2),
             Height = 440
         };
+        Theme.ApplyTab(viewTabs);
         viewTabs.DrawItem += (_, e) =>
         {
             bool sel = viewTabs.SelectedIndex == e.Index;

@@ -64,7 +64,8 @@ public class SkinsPage : UserControl, IRefreshable
             Font = new Font("Segoe UI", 9.5f),
             BackColor = Theme.Card,
             ForeColor = Theme.Text,
-            BorderStyle = BorderStyle.FixedSingle,
+            BorderStyle = BorderStyle.None,
+            Padding = new Padding(4),
             PlaceholderText = Lang.T("🔍 Rechercher un skin ou un pseudo...", "🔍 Search skin or username..."),
             Anchor = AnchorStyles.Top | AnchorStyles.Left
         };

@@ -1,5 +1,5 @@
 {
-  "version": "3.5.2",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.2/TeamLauncher.exe",
-  "changelog": "v3.5.2 — Config embarquée\n\nNouveautés :\n• Fichier default.env embarqué dans l'exe\n• Discord Rich Presence pré-activé\n• Télémétrie et webhook pré-configurés\n• URL de mise à jour auto pré-remplie\n• Les utilisateurs n'ont plus rien à configurer"
+  "version": "3.5.3",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.3/TeamLauncher.exe",
+  "changelog": "v3.5.3 — Suppression des bordures blanches\n\nCorrections :\n• Toutes les bordures blanches des TextBox supprimées (FixedSingle → None)\n• Onglets TabControl sans bordures blanches (Appearance=FlatButtons)\n• Cohérence du thème sombre sur toutes les pages"
 }

@@ -378,7 +378,8 @@ public class OnboardingDialog : Form
             Location = new Point(0, 180),
             BackColor = Theme.Card,
             ForeColor = Theme.Accent,
-            BorderStyle = BorderStyle.FixedSingle,
+            BorderStyle = BorderStyle.None,
+            Padding = new Padding(4),
             PlaceholderText = Lang.T("Colle le code ici…", "Paste the code here…")
         };
         codeBox.KeyPress += (_, e) =>

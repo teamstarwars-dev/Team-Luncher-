@@ -31,11 +31,11 @@ public class ServersPage : UserControl, IRefreshable
         var tabs = new TabControl
         {
             Dock = DockStyle.Fill,
-            DrawMode = TabDrawMode.OwnerDrawFixed,
             ItemSize = new Size(140, 30),
             Font = new Font("Segoe UI", 8.75f),
             Padding = new Point(10, 2)
         };
+        Theme.ApplyTab(tabs);
         tabs.DrawItem += (_, e) =>
         {
             bool sel = tabs.SelectedIndex == e.Index;
@@ -127,9 +127,10 @@ public class ServersPage : UserControl, IRefreshable
         var btnRow = new Panel { Height = 52, Dock = DockStyle.Top, Margin = new Padding(0, 0, 0, 8) };
         addressBox.SetBounds(0, 8, 360, 32);
         addressBox.Font = new Font("Consolas", 10f);
-        addressBox.BorderStyle = BorderStyle.FixedSingle;
+        addressBox.BorderStyle = BorderStyle.None;
         addressBox.BackColor = Theme.Card;
         addressBox.ForeColor = Theme.Text;
+        addressBox.Padding = new Padding(4);
         addressBox.PlaceholderText = Lang.T("adresse.du.serveur.fr", "address.of.the.server.com");
 
         var addBtn = MkBtn("+ Ajouter", primary: true, x: 370, w: 150);
@@ -640,7 +641,7 @@ public class ServersPage : UserControl, IRefreshable
         {
             Dock = DockStyle.Fill, CheckOnClick = true,
             BackColor = Theme.Card, ForeColor = Theme.Text,
-            BorderStyle = BorderStyle.FixedSingle
+            BorderStyle = BorderStyle.None
         };
         foreach (var f in Directory.GetFiles(modsDir, "*.jar"))
             list.Items.Add(Path.GetFileName(f));
@@ -1142,8 +1143,9 @@ public class ServersPage : UserControl, IRefreshable
         var box = new TextBox
         {
             Width = 370, Font = new Font("Consolas", 11f),
-            BorderStyle = BorderStyle.FixedSingle,
-            BackColor = Theme.Card, ForeColor = Theme.Text
+            BorderStyle = BorderStyle.None,
+            BackColor = Theme.Card, ForeColor = Theme.Text,
+            Padding = new Padding(4)
         };
         var lbl = new Label
         {
@@ -1379,7 +1381,7 @@ public class ServersPage : UserControl, IRefreshable
         var list = new ListBox
         {
             Dock = DockStyle.Fill, BackColor = Theme.Card, ForeColor = Theme.Text,
-            BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 9.5f)
+            BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 9.5f)
         };
         foreach (var b in backups)
             list.Items.Add($"{b.LastWriteTime:dd/MM/yyyy HH:mm}   {b.Length / 1024.0 / 1024.0:0.#} Mo   ({b.Name})");

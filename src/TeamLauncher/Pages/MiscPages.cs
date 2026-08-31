@@ -184,9 +184,9 @@ public class SettingsPage : UserControl, IRefreshable
             Dock = DockStyle.Fill,
             ItemSize = new Size(120, 28),
             SizeMode = TabSizeMode.Fixed,
-            DrawMode = TabDrawMode.OwnerDrawFixed,
             Padding = new Point(12, 0)
         };
+        Theme.ApplyTab(tabs);
         tabs.DrawItem += (_, e) =>
         {
             bool active = e.Index == tabs.SelectedIndex;

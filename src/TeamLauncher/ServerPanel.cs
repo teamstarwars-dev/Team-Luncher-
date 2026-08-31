@@ -145,7 +145,8 @@ public class ServerPanel : UserControl
             Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both,
             Dock = DockStyle.Fill, BackColor = Color.FromArgb(12, 14, 10),
             ForeColor = Color.FromArgb(200, 220, 200),
-            BorderStyle = BorderStyle.FixedSingle,
+            BorderStyle = BorderStyle.None,
+            Padding = new Padding(4),
             Font = new Font("Consolas", 9.5f),
             WordWrap = false
         };
@@ -155,7 +156,8 @@ public class ServerPanel : UserControl
             Dock = DockStyle.Bottom, Height = 36,
             Font = new Font("Consolas", 10f),
             BackColor = Theme.Card, ForeColor = Theme.Text,
-            BorderStyle = BorderStyle.FixedSingle
+            BorderStyle = BorderStyle.None,
+            Padding = new Padding(4)
         };
         _cmdBox.PlaceholderText = Lang.T(
             "Commande : list, say Bonjour, whitelist add, op, ban…",
@@ -541,7 +543,7 @@ public class ServerPanel : UserControl
                 Location = new Point(0, 10), AutoSize = true
             };
             ctrl.Location = new Point(220, 6);
-            if (ctrl is TextBox tb) { tb.Width = 300; tb.BackColor = Theme.Card; tb.ForeColor = Theme.Text; tb.BorderStyle = BorderStyle.FixedSingle; }
+            if (ctrl is TextBox tb) { tb.Width = 300; tb.BackColor = Theme.Card; tb.ForeColor = Theme.Text; tb.BorderStyle = BorderStyle.None; tb.Padding = new Padding(4); }
             if (ctrl is ComboBox cb) { cb.Width = 300; cb.BackColor = Theme.Card; cb.ForeColor = Theme.Text; cb.FlatStyle = FlatStyle.Flat; }
             if (ctrl is NumericUpDown nud) { nud.Width = 120; nud.BackColor = Theme.Card; nud.ForeColor = Theme.Text; }
             row.Controls.Add(lbl);

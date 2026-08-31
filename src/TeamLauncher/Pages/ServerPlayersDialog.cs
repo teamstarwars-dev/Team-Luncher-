@@ -60,9 +60,10 @@ public class ServerPlayersDialog : Form
         var addRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
         addBox.Width = 260;
         addBox.Font = new Font("Segoe UI", 10f);
-        addBox.BorderStyle = BorderStyle.FixedSingle;
+        addBox.BorderStyle = BorderStyle.None;
         addBox.BackColor = Theme.Card;
         addBox.ForeColor = Theme.Text;
+        addBox.Padding = new Padding(4);
         addBox.PlaceholderText = Lang.T("Pseudo Minecraft", "Minecraft username");
         var addBtn = new Button { Text = Lang.T("＋ Autoriser", "＋ Allow"), Width = 130, Height = 30 };
         Theme.Apply(addBtn, primary: true);
@@ -81,7 +82,7 @@ public class ServerPlayersDialog : Form
         root.Controls.Add(addRow);
 
         wlList.Size = new Size(400, 120);
-        wlList.BorderStyle = BorderStyle.FixedSingle;
+        wlList.BorderStyle = BorderStyle.None;
         wlList.BackColor = Theme.Card;
         wlList.ForeColor = Theme.Text;
         wlList.Font = new Font("Consolas", 10f);
@@ -107,7 +108,7 @@ public class ServerPlayersDialog : Form
         // ---- connectés ----
         root.Controls.Add(MkTitle(Lang.T("👥 Joueurs connectés", "👥 Connected players")));
         onlineList.Size = new Size(400, 110);
-        onlineList.BorderStyle = BorderStyle.FixedSingle;
+        onlineList.BorderStyle = BorderStyle.None;
         onlineList.BackColor = Color.FromArgb(12, 14, 10);
         onlineList.ForeColor = Theme.Text;
         onlineList.Font = new Font("Consolas", 10f);
@@ -148,9 +149,10 @@ public class ServerPlayersDialog : Form
         });
         motdBox.Width = 480;
         motdBox.Font = new Font("Segoe UI", 10f);
-        motdBox.BorderStyle = BorderStyle.FixedSingle;
+        motdBox.BorderStyle = BorderStyle.None;
         motdBox.BackColor = Theme.Card;
         motdBox.ForeColor = Theme.Text;
+        motdBox.Padding = new Padding(4);
         motdBox.Text = s.Motd;
         root.Controls.Add(motdBox);
         root.Controls.Add(new Label
@@ -162,9 +164,10 @@ public class ServerPlayersDialog : Form
         });
         welcomeBox.Width = 480;
         welcomeBox.Font = new Font("Segoe UI", 10f);
-        welcomeBox.BorderStyle = BorderStyle.FixedSingle;
+        welcomeBox.BorderStyle = BorderStyle.None;
         welcomeBox.BackColor = Theme.Card;
         welcomeBox.ForeColor = Theme.Text;
+        welcomeBox.Padding = new Padding(4);
         welcomeBox.PlaceholderText = Lang.T(
             "Ex : Bienvenue {joueur} sur notre ville RP !",
             "E.g.: Welcome {joueur} to our RP city!");

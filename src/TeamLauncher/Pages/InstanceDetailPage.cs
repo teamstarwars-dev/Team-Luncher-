@@ -532,12 +532,11 @@ public class InstanceDetailPage : UserControl, IRefreshable
 
     // ---------------- journaux (logs) ----------------
 
-    private void LoadLogs()
+    private async void LoadLogs()
     {
         logBox.SuspendRendering();
         logBox.Clear();
 
-        // Cherche game-log.txt puis logs/latest.log
         string instDir = Path.Combine(DataStore.InstancesRoot, inst.Id);
         string? logFile = null;
 
@@ -556,9 +555,17 @@ public class InstanceDetailPage : UserControl, IRefreshable
 
         try
         {
-            var lines = File.ReadAllLines(logFile);
+            var lines = await Task.Run(() =>
+            {
+                var all = File.ReadAllLines(logFile);
+                return all.Length > 500 ? all[^500..] : all;
+            });
+
             foreach (var line in lines)
                 AppendLogLine(line);
+
+            if (lines.Length > 500)
+                AppendText($"── Affichage des 500 dernières lignes (sur {lines.Length}) ──\n", Color.FromArgb(100, 200, 255));
         }
         catch (Exception ex)
         {
@@ -588,7 +595,7 @@ public class InstanceDetailPage : UserControl, IRefreshable
         AppendText(line + "\n", color);
     }
 
-    private void SearchLog()
+    private async void SearchLog()
     {
         string query = logSearchBox.Text.Trim();
         if (string.IsNullOrEmpty(query)) { LoadLogs(); return; }
@@ -614,16 +621,20 @@ public class InstanceDetailPage : UserControl, IRefreshable
 
         try
         {
-            int count = 0;
-            foreach (var line in File.ReadLines(logFile))
+            var result = await Task.Run(() =>
             {
-                if (line.Contains(query, StringComparison.OrdinalIgnoreCase))
+                var matched = new List<string>();
+                foreach (var line in File.ReadLines(logFile))
                 {
-                    AppendLogLine(line);
-                    count++;
+                    if (line.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        matched.Add(line);
                 }
-            }
-            AppendText($"\n── {count} résultat(s) pour « {query} » ──\n", Color.FromArgb(100, 200, 255));
+                return matched;
+            });
+
+            foreach (var line in result)
+                AppendLogLine(line);
+            AppendText($"\n── {result.Count} résultat(s) pour « {query} » ──\n", Color.FromArgb(100, 200, 255));
         }
         catch (Exception ex)
         {

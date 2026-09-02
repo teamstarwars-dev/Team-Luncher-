@@ -1,0 +1,56 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Extract version from csproj
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content 'src/TeamLauncher/TeamLauncher.csproj'
+          $ver = $csproj.Project.PropertyGroup.Version
+          echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
+          echo "Detected version: $ver"
+
+      - name: Build & Publish
+        run: dotnet publish src/TeamLauncher/TeamLauncher.csproj -c Release -r win-x64 --self-contained false -o publish
+
+      - name: Upload exe to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: Team Launcher v${{ steps.version.outputs.VERSION }}
+          files: publish/TeamLauncher.exe
+          generate_release_notes: true
+          make_latest: true
+
+      - name: Update version.json
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.VERSION }}"
+          $json = @{
+            version = $ver
+            url = "https://github.com/${{ github.repository }}/releases/download/v$ver/TeamLauncher.exe"
+            changelog = "v$ver"
+          } | ConvertTo-Json -Compress
+          Set-Content -Path version.json -Value $json -Encoding UTF8
+
+      - name: Commit version.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git diff --staged --quiet || git commit -m "Update version.json to v${{ steps.version.outputs.VERSION }}"
+          git push

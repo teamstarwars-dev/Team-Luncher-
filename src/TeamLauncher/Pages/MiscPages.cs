@@ -401,7 +401,28 @@ public class SettingsPage : UserControl, IRefreshable
             checkUpdateBtn.Enabled = true;
             checkUpdateBtn.Text = Lang.T("Vérifier maintenant", "Check now");
             if (result.Length > 0)
-                MessageBox.Show(result, "Team Launcher — Mises à jour");
+            {
+                var dlg = MessageBox.Show(result + "\n\nMettre à jour maintenant ?",
+                    "Team Launcher — Mises à jour", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                if (dlg == DialogResult.Yes)
+                {
+                    var info = await UpdateService.CheckAsync();
+                    if (info != null)
+                    {
+                        try
+                        {
+                            await UpdateService.UpdateAsync(info.Value.Url, msg =>
+                            {
+                                FindForm()?.BeginInvoke(() => FindForm()!.Text = $"Team Launcher — {msg}");
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher");
+                        }
+                    }
+                }
+            }
         };
         integrationItems.AddRange(new Control[] { versionLabel, checkUpdateBtn });
 

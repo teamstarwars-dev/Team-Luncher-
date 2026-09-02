@@ -6,18 +6,22 @@ namespace TeamLauncher;
 /// <summary>
 /// Mise à jour automatique du launcher.
 /// Vérifie un fichier version.json sur GitHub/serveur, télécharge et relance.
+/// Mode automatique : au démarrage, si une update existe → téléchargement + relance sans interaction.
 /// </summary>
 public static class UpdateService
 {
     // URL par défaut (fallback si pas défini dans les settings)
     private const string DefaultVersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/main/version.json";
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
+    // Utilise Http.Shared (client HTTP partagé)
 
     /// <summary>Version actuelle de l'exe.</summary>
     public static string CurrentVersion =>
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
-    /// <summary>Vérifie au démarrage. Silencieux si pas de mise à jour.</summary>
+    /// <summary>
+    /// Vérifie au démarrage. Si une mise à jour est disponible,
+    /// la propose automatiquement à l'utilisateur (comme Numek Launcher).
+    /// </summary>
     public static async Task CheckOnStartupAsync()
     {
         try
@@ -25,10 +29,37 @@ public static class UpdateService
             var info = await CheckAsync();
             if (info == null) return;
 
-            // Notifier l'utilisateur
-            Notifier.Show(
-                $"Mise à jour disponible : v{info.Value.Version}",
-                $"Tu es en v{CurrentVersion}. Relance pour mettre à jour.");
+            // Proposer automatiquement la mise à jour
+            var mainForm = Application.OpenForms.OfType<Form>().FirstOrDefault();
+            if (mainForm == null) return;
+
+            var result = mainForm.Invoke(() => MessageBox.Show(mainForm,
+                $"Une mise à jour est disponible : v{info.Value.Version}\n\n" +
+                $"Tu es en v{CurrentVersion}\n\n" +
+                $"Changelog :\n{info.Value.Changelog}\n\n" +
+                $"Mettre à jour maintenant ?",
+                "Team Launcher — Mise à jour",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Information));
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    await UpdateAsync(info.Value.Url, msg =>
+                    {
+                        mainForm.BeginInvoke(() => mainForm.Text = $"Team Launcher — {msg}");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    mainForm.BeginInvoke(() =>
+                    {
+                        MessageBox.Show(mainForm, "Erreur lors de la mise à jour :\n" + ex.Message,
+                            "Team Launcher", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        mainForm.Text = "Team Launcher";
+                    });
+                }
+            }
         }
         catch { }
     }
@@ -42,7 +73,7 @@ public static class UpdateService
                 ? DataStore.Settings.UpdateUrl
                 : DefaultVersionUrl;
 
-            string json = await Http.GetStringAsync(versionUrl);
+            string json = await Http.Shared.GetStringAsync(versionUrl);
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
@@ -78,8 +109,7 @@ public static class UpdateService
         {
             progress?.Invoke("Téléchargement de la mise à jour…");
 
-            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-            using var resp = await http.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+            using var resp = await Http.Shared.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
             resp.EnsureSuccessStatusCode();
 
             long total = resp.Content.Headers.ContentLength ?? -1;
@@ -126,7 +156,7 @@ public static class UpdateService
         }
     }
 
-    /// <summary>Propose la mise à jour à l'utilisateur.</summary>
+    /// <summary>Propose la mise à jour à l'utilisateur (depuis les paramètres).</summary>
     public static async Task PromptUpdateAsync(Form owner)
     {
         var info = await CheckAsync();

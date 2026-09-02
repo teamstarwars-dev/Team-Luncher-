@@ -10,7 +10,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class CurseForgeApi
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    // Utilise Http.Shared (client HTTP partagé)
 
     private const int MinecraftGameId = 432;
 
@@ -46,7 +46,7 @@ public static class CurseForgeApi
         using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.curseforge.com/v1" + path);
         req.Headers.Add("x-api-key", ApiKey);
         req.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
         return (await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync())).RootElement.Clone();
     }
@@ -60,7 +60,7 @@ public static class CurseForgeApi
         };
         req.Headers.Add("x-api-key", ApiKey);
         req.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
         return (await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync())).RootElement.Clone();
     }
@@ -181,7 +181,7 @@ public static class CurseForgeApi
                      $"https://www.curseforge.com/api/v1/mods/{file.ModId}/files/{file.FileId}/download";
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("x-api-key", ApiKey);
-        using var resp = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+        using var resp = await Http.Shared.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
         long total = resp.Content.Headers.ContentLength ?? -1;
         await using var fs = File.Create(dest);

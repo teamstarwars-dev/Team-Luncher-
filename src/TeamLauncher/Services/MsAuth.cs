@@ -12,7 +12,6 @@ public sealed record McSession(string Name, string Uuid, string AccessToken);
 /// </summary>
 public static class MsAuth
 {
-    private static readonly HttpClient Http = new();
     private static McSession? _cachedSession;
 
     private static string DataDir => Path.Combine(
@@ -333,7 +332,7 @@ public static class MsAuth
         using var req = new HttpRequestMessage(HttpMethod.Get,
             "https://api.minecraftservices.com/minecraft/profile");
         req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", mcToken);
-        using var profResp = await Http.SendAsync(req);
+        using var profResp = await Http.Shared.SendAsync(req);
         StepLog("Profil : HTTP " + (int)profResp.StatusCode);
         var profBody = await profResp.Content.ReadAsStringAsync();
         if ((int)profResp.StatusCode == 404)
@@ -379,7 +378,7 @@ public static class MsAuth
                     .GetProperty("url").GetString()!;
 
                 Directory.CreateDirectory(DataStore.SkinsDir);
-                byte[] png = await Http.GetByteArrayAsync(url);
+                byte[] png = await Http.Shared.GetByteArrayAsync(url);
                 File.WriteAllBytes(Path.Combine(DataStore.SkinsDir, name + ".png"), png);
                 AuthLog("Skin officiel enregistré (" + png.Length + " octets).");
                 return;
@@ -413,7 +412,7 @@ public static class MsAuth
 
     private static async Task<JsonDocument> PostFormAsync(string url, Dictionary<string, string> form)
     {
-        var resp = await Http.PostAsync(url, new FormUrlEncodedContent(form));
+        var resp = await Http.Shared.PostAsync(url, new FormUrlEncodedContent(form));
         var content = await resp.Content.ReadAsStringAsync();
         try { return JsonDocument.Parse(content); }
         catch
@@ -433,7 +432,7 @@ public static class MsAuth
             req.Headers.TryAddWithoutValidation("x-xbl-contract-version", "1");
             req.Headers.Accept.ParseAdd("application/json");
         }
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         var content = await resp.Content.ReadAsStringAsync();
         try { return JsonDocument.Parse(content); }
         catch

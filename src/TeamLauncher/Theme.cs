@@ -63,8 +63,31 @@ public static class Theme
         if (p.Length == 0 || !File.Exists(p)) return;
         try
         {
-            bgStream = new MemoryStream(File.ReadAllBytes(p));
-            bgImage = Image.FromStream(bgStream);
+            using var original = Image.FromFile(p);
+            // Redimensionner si l'image dépasse la résolution de l'écran pour libérer de la RAM
+            var screen = Screen.PrimaryScreen?.Bounds ?? new Rectangle(0, 0, 1920, 1080);
+            int maxW = screen.Width, maxH = screen.Height;
+            if (original.Width > maxW || original.Height > maxH)
+            {
+                float scale = Math.Min((float)maxW / original.Width, (float)maxH / original.Height);
+                int w = (int)(original.Width * scale), h = (int)(original.Height * scale);
+                var resized = new Bitmap(w, h);
+                using (var g = Graphics.FromImage(resized))
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(original, 0, 0, w, h);
+                }
+                bgStream = new MemoryStream();
+                resized.Save(bgStream, System.Drawing.Imaging.ImageFormat.Png);
+                bgStream.Position = 0;
+                bgImage = Image.FromStream(bgStream);
+                resized.Dispose();
+            }
+            else
+            {
+                bgStream = new MemoryStream(File.ReadAllBytes(p));
+                bgImage = Image.FromStream(bgStream);
+            }
         }
         catch { bgImage = null; }
     }

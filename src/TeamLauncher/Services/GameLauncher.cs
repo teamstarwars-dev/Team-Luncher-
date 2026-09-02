@@ -3,7 +3,11 @@ using System.Text.Json;
 
 namespace TeamLauncher;
 
-/// <summary>Lance le vrai Minecraft Java : prépare les fichiers, authentifie, démarre le processus.</summary>
+/// <summary>
+/// Charge une instance Minecraft Java dans un Process, gère l'authentification,
+/// la sélection de la version, le téléchargement automatique des fichiers manquants,
+/// et la construction de la ligne de commande JVM.
+/// </summary>
 public static class GameLauncher
 {
     private static bool _preparing;
@@ -153,8 +157,8 @@ public static class GameLauncher
                         {
                             try
                             {
-                                var lines = File.ReadLines(gameLogPath).ToList();
-                                logTail = string.Join("\n", lines.TakeLast(30));
+                                var lines = File.ReadLines(gameLogPath).Reverse().Take(30);
+                                logTail = string.Join("\n", lines.Reverse());
                             }
                             catch { }
                         }
@@ -188,12 +192,11 @@ public static class GameLauncher
                 : null;
             if (existing != null && File.Exists(marker)) return existing;
 
-            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
             string url = $"https://api.adoptium.net/v3/binary/latest/{major}/ga/windows/x64/jre/hotspot/normal/eclipse";
             string zipPath = Path.Combine(GameInstaller.RuntimeRoot, $"adoptium-jre-{major}.zip");
             Directory.CreateDirectory(GameInstaller.RuntimeRoot);
 
-            using (var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+            using (var resp = await Http.Shared.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
             {
                 resp.EnsureSuccessStatusCode();
                 await using var fs = File.Create(zipPath);
@@ -263,15 +266,32 @@ public static class GameLauncher
         catch { }
     }
 
-    /// <summary>Mémoire RAM disponible sur le système (en Mo).</summary>
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MEMORYSTATUSEX
+    {
+        public int dwLength;
+        public int dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+    }
+
+    /// <summary>Mémoire RAM disponible sur le système (en Mo) — via Win32, sans WMI.</summary>
     private static long GetAvailableRamMb()
     {
         try
         {
-            using var mc = new System.Management.ManagementObjectSearcher(
-                "SELECT FreePhysicalMemory FROM Win32_OperatingSystem");
-            foreach (var obj in mc.Get())
-                return (long)(Convert.ToUInt64(obj["FreePhysicalMemory"]) / 1024);
+            var mem = new MEMORYSTATUSEX { dwLength = System.Runtime.InteropServices.Marshal.SizeOf<MEMORYSTATUSEX>() };
+            if (GlobalMemoryStatusEx(ref mem))
+                return (long)(mem.ullAvailPhys / (1024 * 1024));
         }
         catch { }
         return -1;
@@ -480,13 +500,14 @@ public static class GameLauncher
 
         if (isForge)
         {
-            // Optimisations compatibilité GTX 1000 / Pilotes stables
+            // MODE COMMANDO : Compatibilité maximale GTX 1000 / Pilotes anciens
             args.Add("-Dsun.java2d.d3d=false"); 
             args.Add("-Dsun.java2d.noddraw=true");
-            // Optimisation RAM et Stabilité GPU pour éviter les crashs "Pilotes"
+            args.Add("-Dsun.java2d.opengl=true");
             args.Add("-XX:+UseG1GC");
             args.Add("-XX:MaxGCPauseMillis=200");
-            args.Add("-Dsun.java2d.opengl=true");
+            args.Add("-XX:+UseStringDeduplication");
+            args.Add("-Xss512k");
         }
         if (isForge)
         {
@@ -542,8 +563,7 @@ public static class GameLauncher
 
     private static async Task<string> LatestReleaseAsync()
     {
-        using var http = new HttpClient();
-        using var doc = JsonDocument.Parse(await http.GetStringAsync(
+        using var doc = JsonDocument.Parse(await Http.Shared.GetStringAsync(
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"));
         return doc.RootElement.GetProperty("latest").GetProperty("release").GetString()!;
     }
@@ -710,8 +730,3 @@ public static class GameLauncher
         }
     }
 }
-
-
-
-
-

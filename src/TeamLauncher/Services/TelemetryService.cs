@@ -10,7 +10,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class TelemetryService
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    // Utilise Http.Shared (client HTTP partagé)
 
     /// <summary>Envoie un rapport de crash Minecraft dans Discord.</summary>
     public static void ReportCrash(InstanceInfo inst, int exitCode, string? gameLogTail = null)
@@ -176,7 +176,7 @@ public static class TelemetryService
             });
 
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var resp = await Http.PostAsync(webhookUrl, content);
+            using var resp = await Http.Shared.PostAsync(webhookUrl, content);
             // Silencieux en cas d'échec (webhook incorrect, Discord down...)
         }
         catch { }

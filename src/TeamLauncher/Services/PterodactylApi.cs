@@ -10,7 +10,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class PterodactylApi
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    // Utilise Http.Shared (client HTTP partagé)
 
     private static string PanelUrl => DataStore.Settings.VpsUrl.TrimEnd('/');
     private static string ApiKey => DataStore.Settings.VpsApiKey;
@@ -41,7 +41,7 @@ public static class PterodactylApi
         using var req = new HttpRequestMessage(HttpMethod.Get, PanelUrl + "/api/client" + path);
         req.Headers.Add("Authorization", "Bearer " + ApiKey);
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
         return (await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync())).RootElement.Clone();
     }
@@ -54,7 +54,7 @@ public static class PterodactylApi
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         if (jsonBody != null)
             req.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
         string body = await resp.Content.ReadAsStringAsync();
         if (body.Length == 0 || body == "null") return default;
@@ -207,7 +207,7 @@ public static class PterodactylApi
         };
         req.Headers.Add("Authorization", "Bearer " + ApiKey);
 
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
     }
 
@@ -220,7 +220,7 @@ public static class PterodactylApi
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         };
         req.Headers.Add("Authorization", "Bearer " + ApiKey);
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
     }
 
@@ -272,7 +272,7 @@ public static class PterodactylApi
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         };
         req.Headers.Add("Authorization", "Bearer " + ApiKey);
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
         var root = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
         return root.RootElement.GetProperty("attributes").GetProperty("identifier").GetString() ?? "";

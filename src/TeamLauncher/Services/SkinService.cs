@@ -9,7 +9,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class SkinService
 {
-    private static readonly HttpClient Http = new();
+    // Utilise Http.Shared (client HTTP partagé)
 
     public static async Task<string> ApplyAsync(InstanceInfo inst, string skinPath)
     {
@@ -47,7 +47,7 @@ public static class SkinService
             $"https://api.modrinth.com/v2/project/customskinloader/version" +
             $"?loaders={Uri.EscapeDataString("[\"forge\"]")}" +
             $"&game_versions={Uri.EscapeDataString($"[\"{mcVersion}\"]")}";
-        using var doc = JsonDocument.Parse(await Http.GetStringAsync(url));
+        using var doc = JsonDocument.Parse(await Http.Shared.GetStringAsync(url));
         if (doc.RootElement.GetArrayLength() == 0)
             throw new Exception(
                 $"CustomSkinLoader introuvable pour Forge {mcVersion}.");
@@ -60,7 +60,7 @@ public static class SkinService
 
         string fileName = file.GetProperty("filename").GetString()!;
         string dest = Path.Combine(modsDir, fileName);
-        using (var resp = await Http.GetAsync(file.GetProperty("url").GetString()!,
+        using (var resp = await Http.Shared.GetAsync(file.GetProperty("url").GetString()!,
                    HttpCompletionOption.ResponseHeadersRead))
         {
             resp.EnsureSuccessStatusCode();

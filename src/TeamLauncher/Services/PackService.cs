@@ -160,7 +160,7 @@ public static class InstanceTools
 /// <summary>Mise à jour automatique des mods d'une instance via l'API Modrinth (par hash de fichier).</summary>
 public static class ModUpdaterService
 {
-    private static readonly HttpClient Http = new();
+    // Utilise Http.Shared (client HTTP partagé)
 
     public static async Task<string> UpdateModsAsync(InstanceInfo inst)
     {
@@ -190,7 +190,7 @@ public static class ModUpdaterService
             loaders = new[] { gameLoader },
             game_versions = new[] { mcVersion }
         });
-        using var resp = await Http.PostAsync("https://api.modrinth.com/v2/version_files/update",
+        using var resp = await Http.Shared.PostAsync("https://api.modrinth.com/v2/version_files/update",
             new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
         resp.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
@@ -219,7 +219,7 @@ public static class ModUpdaterService
             try
             {
                 string newPath = Path.Combine(modsDir, newName);
-                using (var dl = await Http.GetAsync(primary.GetProperty("url").GetString()!,
+                using (var dl = await Http.Shared.GetAsync(primary.GetProperty("url").GetString()!,
                            HttpCompletionOption.ResponseHeadersRead))
                 {
                     dl.EnsureSuccessStatusCode();

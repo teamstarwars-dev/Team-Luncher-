@@ -22,7 +22,7 @@ public class SkinPreview : Control
     public bool Walking
     {
         get => _walking;
-        set { _walking = value; _walkPhase = 0; if (_skin != null && !_timer.Enabled) _timer.Start(); Invalidate(); }
+        set { _walking = value; _walkPhase = 0; if (_skin != null && !_timer.Enabled) StartTimer(); Invalidate(); }
     }
 
     public SkinPreview()
@@ -40,12 +40,21 @@ public class SkinPreview : Control
         };
     }
 
+    protected override void OnVisibleChanged(EventArgs e)
+    {
+        base.OnVisibleChanged(e);
+        if (Visible && _skin != null) StartTimer();
+        else _timer.Stop();
+    }
+
+    private void StartTimer() { if (!_timer.Enabled && _skin != null) _timer.Start(); }
+
     public void SetSkin(Image? skin)
     {
         var old = _skin;
         _skin = skin == null ? null : new Bitmap(skin, new Size(64, 64));
         old?.Dispose();
-        if (_skin != null) { _rotY = 0.5f; _walkPhase = 0; if (!_timer.Enabled) _timer.Start(); }
+        if (_skin != null) { _rotY = 0.5f; _walkPhase = 0; StartTimer(); }
         else _timer.Stop();
         Invalidate();
     }
@@ -232,7 +241,7 @@ public class SkinPreview : Control
     {
         base.OnMouseUp(e);
         _dragging = false;
-        if (_skin != null && !_walking) _timer.Start();
+        if (_skin != null && !_walking) StartTimer();
     }
 
     protected override void OnMouseWheel(MouseEventArgs e)

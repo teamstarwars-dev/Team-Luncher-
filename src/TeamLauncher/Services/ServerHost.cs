@@ -12,7 +12,6 @@ namespace TeamLauncher;
 /// </summary>
 public static class ServerHost
 {
-    private static readonly HttpClient Http = new();
     private static readonly Dictionary<string, Process> Running = new();
 
     public static string Root => Path.Combine(
@@ -35,7 +34,7 @@ public static class ServerHost
     /// <summary>Télécharge url vers dest en signalant la progression en pourcentage.</summary>
     private static async Task DownloadToFileAsync(string id, string url, string dest)
     {
-        using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        using var resp = await Http.Shared.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
         resp.EnsureSuccessStatusCode();
         long? total = resp.Content.Headers.ContentLength;
         await using var fs = File.Create(dest);
@@ -89,7 +88,7 @@ public static class ServerHost
 
     private static async Task DownloadVanillaAsync(HostedServer s)
     {
-        using var manifest = JsonDocument.Parse(await Http.GetStringAsync(
+        using var manifest = JsonDocument.Parse(await Http.Shared.GetStringAsync(
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"));
         string? versionUrl = null;
         foreach (var v in manifest.RootElement.GetProperty("versions").EnumerateArray())
@@ -102,7 +101,7 @@ public static class ServerHost
         }
         if (versionUrl == null) throw new Exception("Version introuvable : " + s.McVersion);
 
-        using var vdoc = JsonDocument.Parse(await Http.GetStringAsync(versionUrl));
+        using var vdoc = JsonDocument.Parse(await Http.Shared.GetStringAsync(versionUrl));
         string jarUrl = vdoc.RootElement.GetProperty("downloads")
             .GetProperty("server").GetProperty("url").GetString()!;
         if (vdoc.RootElement.TryGetProperty("javaVersion", out var jv) &&
@@ -118,11 +117,11 @@ public static class ServerHost
     private static async Task DownloadFabricAsync(HostedServer s)
     {
         var installers = JsonDocument.Parse(
-            await Http.GetStringAsync("https://meta.fabricmc.net/v2/versions/installer")).RootElement;
+            await Http.Shared.GetStringAsync("https://meta.fabricmc.net/v2/versions/installer")).RootElement;
         string installer = installers.EnumerateArray().First().GetProperty("version").GetString()!;
 
         var loaders = JsonDocument.Parse(
-            await Http.GetStringAsync($"https://meta.fabricmc.net/v2/versions/loader/{s.McVersion}")).RootElement;
+            await Http.Shared.GetStringAsync($"https://meta.fabricmc.net/v2/versions/loader/{s.McVersion}")).RootElement;
         string loader = loaders.EnumerateArray().First().GetProperty("loader")
             .GetProperty("version").GetString()!;
 
@@ -143,7 +142,7 @@ public static class ServerHost
 
         if (!neo)
         {
-            var promo = JsonDocument.Parse(await Http.GetStringAsync(
+            var promo = JsonDocument.Parse(await Http.Shared.GetStringAsync(
                 "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json")).RootElement;
             string key = $"{s.McVersion}-recommended";
             if (!promo.GetProperty("promos").TryGetProperty(key, out var fv))
@@ -157,7 +156,7 @@ public static class ServerHost
         else
         {
             string prefix = NeoPrefix(s.McVersion);
-            var meta = JsonDocument.Parse(await Http.GetStringAsync(
+            var meta = JsonDocument.Parse(await Http.Shared.GetStringAsync(
                 "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge")).RootElement;
             string? ver = meta.EnumerateArray()
                 .Select(x => x.GetString())
@@ -400,6 +399,7 @@ public static class ServerHost
             CreateNoWindow = true
         };
         var p = Process.Start(psi) ?? throw new Exception("Impossible de démarrer le processus Java.");
+        p.StandardInput.AutoFlush = true;
         p.OutputDataReceived += (_, e) =>
         {
             if (e.Data == null) return;
@@ -454,14 +454,24 @@ public static class ServerHost
     {
         if (!IsRunning(s)) return;
         ManualStop.Add(s.Id);
-        try { Running[s.Id].StandardInput.WriteLine("stop"); } catch { }
+        try
+        {
+            Running[s.Id].StandardInput.WriteLine("stop");
+            Running[s.Id].StandardInput.Flush();
+        }
+        catch { }
     }
 
     /// <summary>Envoie une commande console au serveur (list, say, whitelist…).</summary>
     public static void SendCommand(string id, string command)
     {
         if (!IsRunningId(id)) return;
-        try { Running[id].StandardInput.WriteLine(command); } catch { }
+        try
+        {
+            Running[id].StandardInput.WriteLine(command);
+            Running[id].StandardInput.Flush();
+        }
+        catch { }
     }
 
     private static readonly HashSet<string> ManualStop = new();
@@ -689,7 +699,7 @@ public static class ServerHost
         using var req = new HttpRequestMessage(HttpMethod.Get,
             "https://api.github.com/repos/playit-cloud/playit-agent/releases/latest");
         req.Headers.UserAgent.ParseAdd("TeamLauncher");
-        using var resp = await Http.SendAsync(req);
+        using var resp = await Http.Shared.SendAsync(req);
         resp.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
         string? url = null;
@@ -705,7 +715,7 @@ public static class ServerHost
         }
         if (url == null) throw new Exception("Agent tunnel introuvable sur GitHub.");
 
-        var bytes = await Http.GetByteArrayAsync(url);
+        var bytes = await Http.Shared.GetByteArrayAsync(url);
         await File.WriteAllBytesAsync(TunnelExe, bytes);
     }
 

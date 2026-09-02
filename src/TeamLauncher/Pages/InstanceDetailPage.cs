@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace TeamLauncher;
@@ -20,6 +21,11 @@ public class InstanceDetailPage : UserControl, IRefreshable
     private readonly ListView itemsList = new();
     private readonly RichTextBox descBox = new();
     private readonly FlowLayoutPanel actionsRow = new();
+    private readonly FlowLayoutPanel screenshotsPanel = new();
+    private readonly Panel logsPanel = new();
+    private readonly RichTextBox logBox = new();
+    private readonly TextBox logSearchBox = new();
+    private bool logAutoScroll = true;
     private string currentTab = "Description";
 
     public InstanceDetailPage()
@@ -135,6 +141,7 @@ public class InstanceDetailPage : UserControl, IRefreshable
         AddTab("🖼️ Resource Packs");
         AddTab("📝 Configs");
         AddTab("📷 Screenshots");
+        AddTab("📝 Journaux");
 
         // ---- zone de contenu ----
         descBox.Dock = DockStyle.Fill;
@@ -154,11 +161,76 @@ public class InstanceDetailPage : UserControl, IRefreshable
         itemsList.Font = new Font("Segoe UI", 9.5f);
         itemsList.DoubleClick += OpenSelectedItem;
 
+        // ---- panneau screenshots (grille de vignettes) ----
+        screenshotsPanel.Dock = DockStyle.Fill;
+        screenshotsPanel.BackColor = Theme.Bg;
+        screenshotsPanel.AutoScroll = true;
+        screenshotsPanel.Padding = new Padding(16);
+        screenshotsPanel.Visible = false;
+
+        // ---- panneau journaux (logs) ----
+        logsPanel.Dock = DockStyle.Fill;
+        logsPanel.BackColor = Theme.Bg;
+        logsPanel.Visible = false;
+
+        var logTopBar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 40,
+            WrapContents = false,
+            Padding = new Padding(0, 4, 0, 4),
+            BackColor = Theme.Bg
+        };
+
+        logSearchBox.PlaceholderText = "🔍  Search log...";
+        logSearchBox.Size = new Size(220, 30);
+        logSearchBox.Font = new Font("Segoe UI", 9.5f);
+        logSearchBox.BackColor = Theme.Panel;
+        logSearchBox.ForeColor = Theme.Text;
+        logSearchBox.BorderStyle = BorderStyle.FixedSingle;
+        logSearchBox.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { SearchLog(); e.SuppressKeyPress = true; } };
+        logTopBar.Controls.Add(logSearchBox);
+
+        var logSearchBtn = new Button { Text = "🔍", Size = new Size(36, 30), Font = new Font("Segoe UI", 10f) };
+        Theme.Apply(logSearchBtn);
+        logSearchBtn.Click += (_, _) => SearchLog();
+        logTopBar.Controls.Add(logSearchBtn);
+
+        var logHighlightBtn = new Button { Text = "🧹", Size = new Size(36, 30), Font = new Font("Segoe UI", 10f) };
+        Theme.Apply(logHighlightBtn);
+        logHighlightBtn.Click += (_, _) => { logSearchBox.Clear(); LoadLogs(); };
+        logTopBar.Controls.Add(logHighlightBtn);
+
+        var logAutoScrollBtn = new Button { Text = "⬇", Size = new Size(36, 30), Font = new Font("Segoe UI", 10f) };
+        Theme.Apply(logAutoScrollBtn);
+        logAutoScrollBtn.Click += (_, _) =>
+        {
+            logAutoScroll = !logAutoScroll;
+            logAutoScrollBtn.ForeColor = logAutoScroll ? Theme.Accent : Theme.TextDim;
+            if (logAutoScroll) logBox.SelectionStart = logBox.TextLength;
+        };
+        logTopBar.Controls.Add(logAutoScrollBtn);
+
+        logBox.Dock = DockStyle.Fill;
+        logBox.BackColor = Color.FromArgb(30, 30, 30);
+        logBox.ForeColor = Color.FromArgb(200, 200, 200);
+        logBox.Font = new Font("Consolas", 9f);
+        logBox.BorderStyle = BorderStyle.None;
+        logBox.ReadOnly = true;
+        logBox.WordWrap = false;
+        logBox.DetectUrls = false;
+        logBox.ShortcutsEnabled = false;
+
+        logsPanel.Controls.Add(logBox);
+        logsPanel.Controls.Add(logTopBar);
+
         actionsRow.Dock = DockStyle.Bottom;
         actionsRow.Height = 46;
         actionsRow.WrapContents = false;
         actionsRow.Padding = new Padding(16, 6, 0, 4);
 
+        Controls.Add(screenshotsPanel);
+        Controls.Add(logsPanel);
         Controls.Add(itemsList);
         Controls.Add(descBox);
         Controls.Add(actionsRow);
@@ -194,8 +266,12 @@ public class InstanceDetailPage : UserControl, IRefreshable
             StyleTab(kv.Value, kv.Key == name);
 
         bool isDesc = name == "Description";
+        bool isScreenshots = name == "📷 Screenshots";
+        bool isLogs = name == "📝 Journaux";
         descBox.Visible = isDesc;
-        itemsList.Visible = !isDesc;
+        itemsList.Visible = !isDesc && !isScreenshots && !isLogs;
+        screenshotsPanel.Visible = isScreenshots;
+        logsPanel.Visible = isLogs;
 
         RefreshData();
     }
@@ -275,6 +351,7 @@ public class InstanceDetailPage : UserControl, IRefreshable
             case "🖼️ Resource Packs": LoadFiles("resourcepacks"); break;
             case "📝 Configs": LoadFiles("config"); break;
             case "📷 Screenshots": LoadScreenshots(); break;
+            case "📝 Journaux": LoadLogs(); break;
             case "🧩 Mods": LoadMods(); break;
             default: LoadDescription(); break;
         }
@@ -330,24 +407,231 @@ public class InstanceDetailPage : UserControl, IRefreshable
 
     private void LoadScreenshots()
     {
-        itemsList.Columns.Clear();
-        itemsList.Items.Clear();
-        itemsList.Columns.Add("Screenshot", 500);
-        itemsList.Columns.Add("Date", 150);
+        screenshotsPanel.SuspendLayout();
+        screenshotsPanel.Controls.Clear();
+
+        // Bouton "Ouvrir le dossier"
+        var openFolderBtn = new Button
+        {
+            Text = "📂  Ouvrir le dossier",
+            AutoSize = true,
+            Height = 34,
+            Padding = new Padding(10, 0, 10, 0),
+            Font = new Font("Segoe UI", 10f),
+            Dock = DockStyle.Top,
+            TextAlign = ContentAlignment.MiddleLeft,
+            FlatStyle = FlatStyle.Flat,
+            ForeColor = Theme.Text,
+            BackColor = Theme.Bg,
+            Cursor = Cursors.Hand
+        };
+        openFolderBtn.FlatAppearance.BorderSize = 0;
+        openFolderBtn.Click += (_, _) => OpenFolder("screenshots");
+        screenshotsPanel.Controls.Add(openFolderBtn);
 
         string dir = Path.Combine(DataStore.InstancesRoot, inst.Id, "screenshots");
         if (!Directory.Exists(dir))
         {
-            itemsList.Items.Add(new ListViewItem(new[] { "Aucun screenshot. En jeu : appuie sur F2.", "" }));
+            var lbl = new Label
+            {
+                Text = "Aucun screenshot.\nEn jeu : appuie sur F2.",
+                ForeColor = Theme.TextDim,
+                Font = new Font("Segoe UI", 10f),
+                AutoSize = true,
+                Padding = new Padding(0, 20, 0, 0)
+            };
+            screenshotsPanel.Controls.Add(lbl);
+            screenshotsPanel.ResumeLayout();
             return;
         }
-        foreach (var f in Directory.GetFiles(dir, "*.png").OrderByDescending(f => f))
+
+        var files = Directory.GetFiles(dir, "*.png")
+            .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+            .ToList();
+
+        if (files.Count == 0)
+        {
+            var lbl = new Label
+            {
+                Text = "Aucun screenshot pour l'instant (F2 en jeu).",
+                ForeColor = Theme.TextDim,
+                Font = new Font("Segoe UI", 10f),
+                AutoSize = true,
+                Padding = new Padding(0, 20, 0, 0)
+            };
+            screenshotsPanel.Controls.Add(lbl);
+            screenshotsPanel.ResumeLayout();
+            return;
+        }
+
+        int thumbW = 250, thumbH = 150, gap = 12;
+
+        foreach (var f in files)
         {
             var fi = new FileInfo(f);
-            itemsList.Items.Add(new ListViewItem(new[] { fi.Name, fi.LastWriteTime.ToString("dd/MM/yyyy HH:mm") }) { Tag = f });
+            var card = new Panel
+            {
+                Size = new Size(thumbW, thumbH + 4),
+                Margin = new Padding(gap / 2),
+                BackColor = Theme.Card,
+                Cursor = Cursors.Hand,
+                Tag = f
+            };
+            Theme.Round(card, 6);
+
+            var pic = new PictureBox
+            {
+                Dock = DockStyle.Fill,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Theme.Card,
+                Tag = f
+            };
+            Theme.Round(pic, 6);
+
+            // Chargement asynchrone du thumbnail
+            string path = f;
+            _ = LoadThumbAsync(pic, path);
+
+            pic.Click += (_, _) => OpenScreenshot(path);
+            card.Click += (_, _) => OpenScreenshot(path);
+            pic.MouseEnter += (_, _) => { pic.BackColor = ControlPaint.Light(Theme.Card, 0.15f); card.BackColor = pic.BackColor; };
+            pic.MouseLeave += (_, _) => { pic.BackColor = Theme.Card; card.BackColor = Theme.Card; };
+
+            card.Controls.Add(pic);
+            screenshotsPanel.Controls.Add(card);
         }
-        if (itemsList.Items.Count == 0)
-            itemsList.Items.Add(new ListViewItem(new[] { "Aucun screenshot pour l'instant (F2 en jeu).", "" }));
+
+        screenshotsPanel.ResumeLayout();
+    }
+
+    private static async Task LoadThumbAsync(PictureBox pic, string path)
+    {
+        try
+        {
+            await using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+            var img = Image.FromStream(fs);
+            // Redimensionner en mémoire pour le thumbnail
+            var thumb = new Bitmap(250, 150);
+            using (var g = Graphics.FromImage(thumb))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.DrawImage(img, 0, 0, 250, 150);
+            }
+            img.Dispose();
+            if (pic.IsDisposed) { thumb.Dispose(); return; }
+            pic.Image = thumb;
+        }
+        catch { }
+    }
+
+    private static void OpenScreenshot(string path)
+    {
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); } catch { }
+    }
+
+    // ---------------- journaux (logs) ----------------
+
+    private void LoadLogs()
+    {
+        logBox.SuspendRendering();
+        logBox.Clear();
+
+        // Cherche game-log.txt puis logs/latest.log
+        string instDir = Path.Combine(DataStore.InstancesRoot, inst.Id);
+        string? logFile = null;
+
+        string gameLog = Path.Combine(instDir, "game-log.txt");
+        if (File.Exists(gameLog)) logFile = gameLog;
+
+        string latestLog = Path.Combine(instDir, "logs", "latest.log");
+        if (logFile == null && File.Exists(latestLog)) logFile = latestLog;
+
+        if (logFile == null)
+        {
+            AppendText("Aucun journal.\nLance Minecraft pour générer des logs.", Color.FromArgb(150, 150, 150));
+            logBox.ResumeRendering();
+            return;
+        }
+
+        try
+        {
+            var lines = File.ReadAllLines(logFile);
+            foreach (var line in lines)
+                AppendLogLine(line);
+        }
+        catch (Exception ex)
+        {
+            AppendText($"Erreur de lecture : {ex.Message}", Color.Red);
+        }
+
+        if (logAutoScroll)
+            logBox.SelectionStart = logBox.TextLength;
+
+        logBox.ResumeRendering();
+    }
+
+    private void AppendLogLine(string line)
+    {
+        Color color;
+        if (line.Contains("/ERROR") || line.Contains("[ERROR]"))
+            color = Color.FromArgb(255, 80, 80);
+        else if (line.Contains("/WARN") || line.Contains("[WARN]"))
+            color = Color.FromArgb(255, 200, 60);
+        else if (line.Contains("/DEBUG") || line.Contains("[DEBUG]"))
+            color = Color.FromArgb(120, 180, 255);
+        else if (line.Contains("/INFO") || line.Contains("[INFO]"))
+            color = Color.FromArgb(200, 200, 200);
+        else
+            color = Color.FromArgb(160, 160, 160);
+
+        AppendText(line + "\n", color);
+    }
+
+    private void SearchLog()
+    {
+        string query = logSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(query)) { LoadLogs(); return; }
+
+        logBox.SuspendRendering();
+        logBox.Clear();
+
+        string instDir = Path.Combine(DataStore.InstancesRoot, inst.Id);
+        string? logFile = null;
+
+        string gameLog = Path.Combine(instDir, "game-log.txt");
+        if (File.Exists(gameLog)) logFile = gameLog;
+
+        string latestLog = Path.Combine(instDir, "logs", "latest.log");
+        if (logFile == null && File.Exists(latestLog)) logFile = latestLog;
+
+        if (logFile == null)
+        {
+            AppendText("Aucun journal.", Color.FromArgb(150, 150, 150));
+            logBox.ResumeRendering();
+            return;
+        }
+
+        try
+        {
+            int count = 0;
+            foreach (var line in File.ReadLines(logFile))
+            {
+                if (line.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    AppendLogLine(line);
+                    count++;
+                }
+            }
+            AppendText($"\n── {count} résultat(s) pour « {query} » ──\n", Color.FromArgb(100, 200, 255));
+        }
+        catch (Exception ex)
+        {
+            AppendText($"Erreur : {ex.Message}", Color.Red);
+        }
+
+        logBox.SelectionStart = logBox.TextLength;
+        logBox.ResumeRendering();
     }
 
     private void LoadMods()
@@ -516,12 +800,6 @@ public class InstanceDetailPage : UserControl, IRefreshable
             openRpBtn.Click += (_, _) => OpenFolder("resourcepacks");
             actionsRow.Controls.Add(openRpBtn);
         }
-        else if (currentTab == "📷 Screenshots")
-        {
-            var openBtn = MkActionBtn("📂 Ouvrir le dossier screenshots");
-            openBtn.Click += (_, _) => OpenFolder("screenshots");
-            actionsRow.Controls.Add(openBtn);
-        }
         else if (currentTab == "📝 Configs")
         {
             var openCfgBtn = MkActionBtn("📂 Ouvrir le dossier config");
@@ -653,4 +931,31 @@ public class InstanceDetailPage : UserControl, IRefreshable
         try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
         catch { }
     }
+
+    // ---------------- helpers RichTextBox ----------------
+
+    private void AppendText(string text, Color color)
+    {
+        logBox.SelectionStart = logBox.TextLength;
+        logBox.SelectionLength = 0;
+        logBox.SelectionColor = color;
+        logBox.AppendText(text);
+    }
+}
+
+static class RichTextBoxExtensions
+{
+    public static void SuspendRendering(this RichTextBox rtb)
+        => SendMessage(rtb.Handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+
+    public static void ResumeRendering(this RichTextBox rtb)
+    {
+        SendMessage(rtb.Handle, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
+        rtb.Invalidate(true);
+        rtb.Update();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wp, IntPtr lp);
+    private const int WM_SETREDRAW = 0x000B;
 }

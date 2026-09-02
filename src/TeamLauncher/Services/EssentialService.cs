@@ -9,7 +9,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class EssentialService
 {
-    private static readonly HttpClient Http = new();
+    // Utilise Http.Shared (client HTTP partagé)
 
     private const string ProjectId = "essential"; // slug Modrinth officiel
 
@@ -24,7 +24,7 @@ public static class EssentialService
             $"https://api.modrinth.com/v2/project/{ProjectId}/version" +
             $"?loaders={Uri.EscapeDataString("[\"fabric\"]")}" +
             $"&game_versions={Uri.EscapeDataString($"[\"{mcVersion}\"]")}";
-        using var doc = JsonDocument.Parse(await Http.GetStringAsync(url));
+        using var doc = JsonDocument.Parse(await Http.Shared.GetStringAsync(url));
         if (doc.RootElement.GetArrayLength() == 0)
             throw new Exception(
                 $"Aucune version d'Essential trouvée pour Fabric {mcVersion}.\n" +
@@ -50,7 +50,7 @@ public static class EssentialService
         Directory.CreateDirectory(modsDir);
         string dest = Path.Combine(modsDir, fileName);
 
-        using (var resp = await Http.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
+        using (var resp = await Http.Shared.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
         {
             resp.EnsureSuccessStatusCode();
             await using var fs = File.Create(dest);

@@ -28,7 +28,7 @@ public static class PackShareService
 
     public sealed record SharedFileInfo(string Path, string Sha1, long Size);
 
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
+    // Utilise Http.Shared (client HTTP partagé)
     private const string FormatId = "teamlauncher-pack-v2";
 
     // ======================== EXPORT ========================
@@ -257,7 +257,7 @@ public static class PackShareService
             using var content = new StringContent(
                 JsonSerializer.Serialize(new { hashes = hashes.Keys.ToArray(), algorithm = "sha1" }),
                 Encoding.UTF8, "application/json");
-            var resp = await Http.PostAsync("https://api.modrinth.com/v2/version_files", content, ct);
+            var resp = await Http.Shared.PostAsync("https://api.modrinth.com/v2/version_files", content, ct);
             resp.EnsureSuccessStatusCode();
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
             foreach (var p in doc.RootElement.EnumerateObject())
@@ -331,7 +331,7 @@ public static class PackShareService
             if (item.Url.Length == 0) { failed++; continue; }
             try
             {
-                byte[] data = await Http.GetByteArrayAsync(item.Url, ct);
+                byte[] data = await Http.Shared.GetByteArrayAsync(item.Url, ct);
                 await File.WriteAllBytesAsync(Path.Combine(destDir, item.Filename), data);
             }
             catch

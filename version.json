@@ -1,5 +1,5 @@
 {
   "version": "3.5.4",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.3/TeamLauncher.exe",
-  "changelog": "v3.5.3 — Suppression des bordures blanches\n\nCorrections :\n• Toutes les bordures blanches des TextBox supprimées (FixedSingle → None)\n• Onglets TabControl sans bordures blanches (Appearance=FlatButtons)\n• Cohérence du thème sombre sur toutes les pages"
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.4/TeamLauncher.exe",
+  "changelog": "v3.5.4 — Optimisations PC portable + commandes serveur\n\nNouveau :\n• Optimisations mémoire pour PC portables (HttpClient partagé, image redimensionnée, WMI remplacé)\n• Commandes serveur instantanées (flush stdin)\n• SkinPreview arrêté quand invisible\n• CrashAnalyzer sans double numération"
 }

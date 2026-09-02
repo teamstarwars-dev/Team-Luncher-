@@ -62,10 +62,8 @@ public static class CrashAnalyzer
             string gameLog = Path.Combine(gameDir, "game-log.txt");
             if (File.Exists(gameLog))
             {
-                var lines = File.ReadLines(gameLog);
-                int total = lines.Count();
-                string tail = string.Join("\n",
-                    lines.Skip(Math.Max(0, total - 300)));
+                var lines = File.ReadLines(gameLog).Reverse().Take(300).Reverse();
+                string tail = string.Join("\n", lines);
                 return Analyze(tail);
             }
         }

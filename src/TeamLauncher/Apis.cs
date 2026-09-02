@@ -4,12 +4,11 @@ namespace TeamLauncher;
 
 public static class MojangApi
 {
-    private static readonly HttpClient Http = new();
     private static List<string>? _releasesCache;
 
     public static async Task<List<string>> GetVersionsAsync()
     {
-        var json = await Http.GetStringAsync(
+        var json = await Http.Shared.GetStringAsync(
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
         using var doc = JsonDocument.Parse(json);
         return doc.RootElement.GetProperty("versions")
@@ -22,7 +21,7 @@ public static class MojangApi
     public static async Task<List<string>> GetReleasesAsync()
     {
         if (_releasesCache != null) return _releasesCache;
-        var json = await Http.GetStringAsync(
+        var json = await Http.Shared.GetStringAsync(
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
         using var doc = JsonDocument.Parse(json);
         _releasesCache = doc.RootElement.GetProperty("versions")
@@ -40,7 +39,7 @@ public static class MojangApi
     {
         try
         {
-            var json = await Http.GetStringAsync(
+            var json = await Http.Shared.GetStringAsync(
                 $"https://api.mojang.com/users/profiles/minecraft/{Uri.EscapeDataString(playerName)}");
             using var doc = JsonDocument.Parse(json);
             string id = doc.RootElement.GetProperty("id").GetString() ?? "";
@@ -54,7 +53,6 @@ public static class MojangApi
 
 public static class ModrinthApi
 {
-    private static readonly HttpClient Http = new();
 
     public sealed record Hit(string Title, string Slug, string Type, long Downloads,
         string Description, string Loaders, string IconUrl);
@@ -73,7 +71,7 @@ public static class ModrinthApi
         string url = $"https://api.modrinth.com/v2/project/{Uri.EscapeDataString(slug)}/version";
         if (parts.Count > 0) url += "?" + string.Join("&", parts);
 
-        using var doc = JsonDocument.Parse(await Http.GetStringAsync(url));
+        using var doc = JsonDocument.Parse(await Http.Shared.GetStringAsync(url));
         if (doc.RootElement.GetArrayLength() == 0)
             throw new Exception("Aucune version compatible trouvée sur Modrinth.");
 
@@ -90,7 +88,7 @@ public static class ModrinthApi
         Directory.CreateDirectory(destDir);
         string dest = Path.Combine(destDir,
             file.GetProperty("filename").GetString() ?? Guid.NewGuid().ToString("N"));
-        using (var resp = await Http.GetAsync(file.GetProperty("url").GetString()!,
+        using (var resp = await Http.Shared.GetAsync(file.GetProperty("url").GetString()!,
                    HttpCompletionOption.ResponseHeadersRead))
         {
             resp.EnsureSuccessStatusCode();
@@ -104,7 +102,7 @@ public static class ModrinthApi
     {
         var url = $"https://api.modrinth.com/v2/search?limit=25&query={Uri.EscapeDataString(query)}" +
                   $"&facets=%5B%5B%22project_type%3A{projectType}%22%5D%5D";
-        var json = await Http.GetStringAsync(url);
+        var json = await Http.Shared.GetStringAsync(url);
         using var doc = JsonDocument.Parse(json);
         return doc.RootElement.GetProperty("hits")
             .EnumerateArray()

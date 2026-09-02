@@ -15,6 +15,7 @@ public class ModelViewer3D : Control
     private float _zoom = 8f;
     private bool _dragging;
     private Point _lastMouse;
+    private readonly List<(PointF[] Points, float Depth, Color Color)> _faceBuffer = new();
 
     private sealed class ModelElement
     {
@@ -203,7 +204,7 @@ public class ModelViewer3D : Control
         float cosY = MathF.Cos(_angleY), sinY = MathF.Sin(_angleY);
 
         // Collect all faces with depth for sorting
-        var faces = new List<(PointF[] Points, float Depth, Color Color)>();
+        _faceBuffer.Clear();
 
         foreach (var elem in _elements)
         {
@@ -264,12 +265,12 @@ public class ModelViewer3D : Control
                     avgZ += rz2;
                 }
                 avgZ /= 4;
-                faces.Add((pts, avgZ, faceShade[fi]));
+                _faceBuffer.Add((pts, avgZ, faceShade[fi]));
             }
         }
 
         // Sort by depth (back to front)
-        foreach (var f in faces.OrderByDescending(f => f.Depth))
+        foreach (var f in _faceBuffer.OrderByDescending(f => f.Depth))
         {
             using var brush = new SolidBrush(f.Color);
             g.FillPolygon(brush, f.Points);

@@ -12,7 +12,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class GameInstaller
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(10) };
+    // Utilise Http.Shared (client HTTP partagé)
 
     public static string RuntimeRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -114,7 +114,8 @@ public static class GameInstaller
         }
 
         // ---- 4. Assets (sons, textures du menu...) — sautés en mode rapide ----
-        string assetsIndexName = versionId;
+        string assetsIndexName = json.RootElement.TryGetProperty("assets", out var a)
+            ? a.GetString()! : versionId;
         string? assetsObjectsDir = Path.Combine(AssetsDir, "objects");
         bool assetsAlreadyThere = fast
             && Directory.Exists(assetsObjectsDir)
@@ -123,8 +124,6 @@ public static class GameInstaller
         bool assetsHadFailures = false;
         if (json.RootElement.TryGetProperty("assetIndex", out var assetIndex) && !assetsAlreadyThere)
         {
-            assetsIndexName = json.RootElement.TryGetProperty("assets", out var a)
-                ? a.GetString()! : versionId;
             string indexPath = Path.Combine(AssetsDir, "indexes", assetsIndexName + ".json");
             Directory.CreateDirectory(Path.GetDirectoryName(indexPath)!);
             await DownloadAsync(assetIndex.GetProperty("url").GetString()!, indexPath, null, ct);
@@ -405,7 +404,7 @@ public static class GameInstaller
     private static async Task<string> EnsureNeoForgeInstalledAsync(string mcVersion, CancellationToken ct)
     {
         // 1. Versions disponibles (ex: "21.1.77" → MC 1.21.1)
-        string meta = await Http.GetStringAsync(
+        string meta = await Http.Shared.GetStringAsync(
             "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge", ct);
         using var listDoc = JsonDocument.Parse(meta);
         string prefix = mcVersion.Length > 2 ? mcVersion.Substring(2) : mcVersion; // "1.20.4" → "20.4"
@@ -463,7 +462,7 @@ public static class GameInstaller
     private static async Task<string> EnsureFabricInstalledAsync(string mcVersion, CancellationToken ct)
     {
         // 1. Dernière version du loader Fabric compatible
-        string loaderList = await Http.GetStringAsync(
+        string loaderList = await Http.Shared.GetStringAsync(
             $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}", ct);
         using var list = JsonDocument.Parse(loaderList);
         if (list.RootElement.GetArrayLength() == 0)
@@ -477,7 +476,7 @@ public static class GameInstaller
 
         // 2. Profil de version officiel (format standard Mojang)
         Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
-        string profile = await Http.GetStringAsync(
+        string profile = await Http.Shared.GetStringAsync(
             $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{loaderVer}/profile/json", ct);
         await File.WriteAllTextAsync(jsonPath, profile, ct);
         return fabricId;
@@ -490,7 +489,7 @@ public static class GameInstaller
     private static async Task<string> EnsureForgeInstalledAsync(string mcVersion, CancellationToken ct)
     {
         // 1. Dernière build de Forge pour cette version (promotions officielles)
-        string promosJson = await Http.GetStringAsync(
+        string promosJson = await Http.Shared.GetStringAsync(
             "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", ct);
         using var promos = JsonDocument.Parse(promosJson);
         var p = promos.RootElement.GetProperty("promos");
@@ -590,7 +589,7 @@ public static class GameInstaller
         if (File.Exists(localPath))
             return await JsonDocument.ParseAsync(File.OpenRead(localPath), cancellationToken: ct);
 
-        string manifestJson = await Http.GetStringAsync(
+        string manifestJson = await Http.Shared.GetStringAsync(
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", ct);
         using var manifest = JsonDocument.Parse(manifestJson);
         foreach (var v in manifest.RootElement.GetProperty("versions").EnumerateArray())
@@ -680,7 +679,7 @@ public static class GameInstaller
         {
             try
             {
-                using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+                using var resp = await Http.Shared.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
                 resp.EnsureSuccessStatusCode();
                 await using var fs = File.Create(dest);
                 await resp.Content.CopyToAsync(fs, ct);

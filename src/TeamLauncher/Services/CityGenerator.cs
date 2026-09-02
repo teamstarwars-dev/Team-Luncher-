@@ -12,7 +12,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class CityGenerator
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
+    // Utilise Http.Shared (client HTTP partagé)
 
     private static readonly Dictionary<string, byte> BlockColors = new()
     {
@@ -80,7 +80,7 @@ out body;
 out skel qt;";
 
         var content = new StringContent(query, Encoding.UTF8, "application/x-www-form-urlencoded");
-        var response = await Http.PostAsync("https://overpass-api.de/api/interpreter", content);
+        var response = await Http.Shared.PostAsync("https://overpass-api.de/api/interpreter", content);
         response.EnsureSuccessStatusCode();
         string json = await response.Content.ReadAsStringAsync();
 

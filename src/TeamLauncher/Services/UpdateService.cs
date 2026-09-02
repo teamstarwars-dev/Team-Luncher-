@@ -11,7 +11,7 @@ namespace TeamLauncher;
 public static class UpdateService
 {
     // URL par défaut (fallback si pas défini dans les settings)
-    private const string DefaultVersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/main/version.json";
+    private const string DefaultVersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/master/version.json";
     // Utilise Http.Shared (client HTTP partagé)
 
     /// <summary>Version actuelle de l'exe.</summary>
@@ -69,11 +69,7 @@ public static class UpdateService
     {
         try
         {
-            string versionUrl = !string.IsNullOrEmpty(DataStore.Settings.UpdateUrl)
-                ? DataStore.Settings.UpdateUrl
-                : DefaultVersionUrl;
-
-            string json = await Http.Shared.GetStringAsync(versionUrl);
+            string json = await Http.Shared.GetStringAsync(DefaultVersionUrl);
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 

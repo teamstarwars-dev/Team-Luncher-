@@ -1,5 +1,5 @@
 {
-  "version": "3.5.5",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.5/TeamLauncher.exe",
-  "changelog": "v3.5.5 — Onglet Journaux + screenshots vignettes + optimisations PC portable\n\nNouveau :\n• Onglet Journaux avec coloration syntaxique (INFO/WARN/ERROR/DEBUG)\n• Recherche dans les logs avec filtrage en temps réel\n• Screenshots en grille de vignettes (thumbnails 250x150)\n\nOptimisations :\n• HttpClient partagé (Http.Shared)\n• WMI remplacé par P/Invoke GlobalMemoryStatusEx\n• SkinPreview timer arrêté quand invisible\n\nCorrections :\n• Commandes serveur instantanées (AutoFlush + Flush)\n• Bug asset index name (fast path fix)\n• Auto-update au démarrage"
+  "version": "3.5.6",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.6/TeamLauncher.exe",
+  "changelog": "v3.5.6"
 }

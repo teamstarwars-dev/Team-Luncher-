@@ -108,7 +108,7 @@ public class SkinsPage : UserControl, IRefreshable
         // --- Panneau de droite (preview + actions) ---
         var previewHost = new Panel
         {
-            Width = 360,
+            Width = 500,
             Dock = DockStyle.Right,
             BackColor = Theme.Card,
             Padding = new Padding(8)
@@ -122,18 +122,18 @@ public class SkinsPage : UserControl, IRefreshable
         var btnPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 90,
+            Height = 70,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             BackColor = Color.Transparent,
-            Padding = new Padding(4, 8, 4, 4)
+            Padding = new Padding(4, 4, 4, 4)
         };
 
         var importBtn = MakeActionBtn("📥 Importer", "📥 Import");
         importBtn.Click += (_, _) => ImportSkins();
         btnPanel.Controls.Add(importBtn);
 
-        var row1 = new FlowLayoutPanel { Height = 36, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
+        var row1 = new FlowLayoutPanel { Height = 30, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
         var importMultiBtn = MakeActionBtn("📁 Plusieurs", "📁 Batch import");
         importMultiBtn.Click += (_, _) => ImportSkinsMulti();
         row1.Controls.Add(importMultiBtn);
@@ -142,7 +142,7 @@ public class SkinsPage : UserControl, IRefreshable
         row1.Controls.Add(exportBtn);
         btnPanel.Controls.Add(row1);
 
-        var row2 = new FlowLayoutPanel { Height = 36, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
+        var row2 = new FlowLayoutPanel { Height = 30, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
         applyBtn = MakeActionBtn("✓ Appliquer", "✓ Apply", primary: true);
         applyBtn.Click += (_, _) => ApplySelectedSkin();
         row2.Controls.Add(applyBtn);
@@ -158,7 +158,7 @@ public class SkinsPage : UserControl, IRefreshable
             ForeColor = Theme.TextDim,
             Font = new Font("Segoe UI", 8f),
             Dock = DockStyle.Bottom,
-            Height = 18,
+            Height = 14,
             TextAlign = ContentAlignment.MiddleCenter,
             BackColor = Color.Transparent
         };
@@ -185,7 +185,7 @@ public class SkinsPage : UserControl, IRefreshable
 
         Resize += (_, _) =>
         {
-            previewHost.Width = Math.Min(400, Math.Max(300, Width / 3));
+            previewHost.Width = Math.Min(540, Math.Max(400, Width / 3));
         };
 
         LoadFavorites();

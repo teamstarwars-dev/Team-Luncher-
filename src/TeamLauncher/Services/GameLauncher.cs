@@ -10,7 +10,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class GameLauncher
 {
-    private static bool _preparing;
+    private static int _preparingFlag;
 
     /// <summary>True tant que Minecraft tourne : empêche un second lancement.</summary>
     public static bool GameRunning { get; private set; }
@@ -44,7 +44,7 @@ public static class GameLauncher
             alive = TrackedButtons.Select(w => w.TryGetTarget(out var b) ? b : null).OfType<Button>().ToList();
         }
         foreach (var b in alive) ApplyTo(b);
-        StateChanged?.Invoke();
+        try { StateChanged?.Invoke(); } catch { }
     }
 
     private static void ApplyTo(Button b)
@@ -53,8 +53,8 @@ public static class GameLauncher
         {
             b.BeginInvoke(() =>
             {
-                b.Enabled = !GameRunning && !_preparing;
-                b.Text = GameRunning ? "En jeu..." : !_preparing ? "▶  Jouer" : "Lancement...";
+                b.Enabled = !GameRunning && Interlocked.CompareExchange(ref _preparingFlag, 0, 0) == 0;
+                b.Text = GameRunning ? "En jeu..." : Interlocked.CompareExchange(ref _preparingFlag, 0, 0) == 0 ? "▶  Jouer" : "Lancement...";
             });
         }
         catch { }
@@ -62,7 +62,7 @@ public static class GameLauncher
 
     public static void Play(InstanceInfo inst, string? joinServer = null, CancellationToken ct = default)
     {
-        if (_preparing || GameRunning)
+        if (Interlocked.CompareExchange(ref _preparingFlag, 1, 0) != 0 || GameRunning)
         {
             MessageBox.Show(
                 GameRunning
@@ -71,7 +71,6 @@ public static class GameLauncher
                 "Team Launcher", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        _preparing = true;
         CurrentServer = string.IsNullOrWhiteSpace(joinServer) ? null : joinServer;
         inst.Launches++;
         DataStore.Save();
@@ -109,11 +108,12 @@ public static class GameLauncher
                     "\n\nDétails techniques enregistrés dans :\n" + LogFile,
                     "Team Launcher", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 owner.Close();
+                owner.Dispose();
             }
             finally
             {
                 try { progressForm.BeginInvoke(progressForm.Close); } catch { }
-                _preparing = false;
+                Interlocked.Exchange(ref _preparingFlag, 0);
 
                 if (game != null)
                 {

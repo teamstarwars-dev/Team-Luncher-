@@ -411,15 +411,19 @@ public class MainForm : Form
         {
             _ = UpdateService.CheckOnStartupAsync();
             _ = TelemetryService.ReportStartupAsync();
-            var checks = await HealthService.RunAllAsync();
-            var problems = checks.Where(c => !c.Ok).ToList();
-            if (problems.Count > 0)
+            try
             {
-                var msg = "Quelques points à surveiller :\n\n" +
-                          string.Join("\n", problems.Select(p => $"• {p.Name} : {p.Detail}"));
-                BeginInvoke(() => MessageBox.Show(this, msg,
-                    "Team Launcher — Diagnostic", MessageBoxButtons.OK, MessageBoxIcon.Warning));
+                var checks = await HealthService.RunAllAsync();
+                var problems = checks.Where(c => !c.Ok).ToList();
+                if (problems.Count > 0)
+                {
+                    var msg = "Quelques points à surveiller :\n\n" +
+                              string.Join("\n", problems.Select(p => $"• {p.Name} : {p.Detail}"));
+                    BeginInvoke(() => MessageBox.Show(this, msg,
+                        "Team Launcher — Diagnostic", MessageBoxButtons.OK, MessageBoxIcon.Warning));
+                }
             }
+            catch { }
 
             // Proposition d'import des mondes CurseForge plus récents (silencieux si rien à importer).
             BeginInvoke(OfferWorldImport);
@@ -432,6 +436,7 @@ public class MainForm : Form
             trayIcon.Visible = false;
             GameLauncher.StateChanged -= OnGameStateChanged;
             PresenceService.Shutdown();
+            DataStore.SaveNow();
         };
 
         // ---- raccourci bureau automatique (première ouverture) ----

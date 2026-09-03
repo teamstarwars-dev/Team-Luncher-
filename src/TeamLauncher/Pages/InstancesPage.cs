@@ -9,6 +9,11 @@ public class InstancesPage : UserControl, IRefreshable
     private TextBox filterBox = new();
     private Label emptyLabel = new();
 
+    private static readonly Font CardNameFont = new("Segoe UI", 10f, FontStyle.Bold);
+    private static readonly Font CardMetaFont = new("Segoe UI", 8f);
+    private static readonly Font PlaceholderFont = new("Segoe UI", 26f, FontStyle.Bold);
+    private static readonly Font PlayBtnFont = new("Segoe UI", 10f, FontStyle.Bold);
+
     public InstancesPage()
     {
         Dock = DockStyle.Fill;
@@ -882,15 +887,14 @@ public class InstancesPage : UserControl, IRefreshable
                 Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
                 File.Copy(src, dst, overwrite: true);
             }
+            DataStore.Settings.Instances.Add(inst);
+            DataStore.Save();
+            RefreshData();
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Erreur pendant l'import : {ex.Message}", "Team Launcher");
         }
-
-        DataStore.Settings.Instances.Add(inst);
-        DataStore.Save();
-        RefreshData();
     }
 
     public void RefreshData()
@@ -950,11 +954,15 @@ public class InstancesPage : UserControl, IRefreshable
         {
             try
             {
+                using var fs = File.OpenRead(inst.ImagePath);
+                using var ms = new MemoryStream();
+                fs.CopyTo(ms);
+                ms.Position = 0;
                 thumb = new PictureBox
                 {
                     Dock = DockStyle.Fill,
                     SizeMode = PictureBoxSizeMode.Zoom,
-                    Image = Image.FromFile(inst.ImagePath),
+                    Image = Image.FromStream(ms),
                     BackColor = Color.Transparent,
                     Cursor = Cursors.Hand
                 };
@@ -969,7 +977,7 @@ public class InstancesPage : UserControl, IRefreshable
             {
                 Text = inst.Name.Length > 0 ? inst.Name[..1].ToUpper() : "?",
                 ForeColor = Theme.AccentDim,
-                Font = new Font("Segoe UI", 26f, FontStyle.Bold),
+                Font = PlaceholderFont,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = Color.Transparent,
@@ -1043,7 +1051,7 @@ public class InstancesPage : UserControl, IRefreshable
         {
             Text = inst.Name,
             ForeColor = Theme.Text,
-            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            Font = CardNameFont,
             Location = new Point(12, 106),
             AutoSize = true,
             MaximumSize = new Size(cardW - 24, 0),
@@ -1055,7 +1063,7 @@ public class InstancesPage : UserControl, IRefreshable
         {
             Text = $"{inst.Loader} • Minecraft {inst.McVersion}",
             ForeColor = Theme.TextDim,
-            Font = new Font("Segoe UI", 8f),
+            Font = CardMetaFont,
             Location = new Point(12, 128),
             AutoSize = true,
             Cursor = Cursors.Hand

@@ -666,10 +666,10 @@ public class SkinsPage : UserControl, IRefreshable
         {
             try
             {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
-                byte[] data = await http.GetByteArrayAsync(
-                    $"https://mineskin.eu/avatar/{Uri.EscapeDataString(skin.Name)}/100");
-                var ms = new MemoryStream(data);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                byte[] data = await Http.Shared.GetByteArrayAsync(
+                    $"https://mineskin.eu/avatar/{Uri.EscapeDataString(skin.Name)}/100", cts.Token);
+                using var ms = new MemoryStream(data);
                 var img = Image.FromStream(ms);
                 thumb.BeginInvoke(() => thumb.Image = img);
             }

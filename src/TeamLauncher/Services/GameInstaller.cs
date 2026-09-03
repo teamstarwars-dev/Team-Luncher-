@@ -587,7 +587,10 @@ public static class GameInstaller
         // cache local prioritaire : évite un aller-retour réseau à chaque lancement
         string localPath = Path.Combine(VersionsDir, versionId, versionId + ".json");
         if (File.Exists(localPath))
-            return await JsonDocument.ParseAsync(File.OpenRead(localPath), cancellationToken: ct);
+        {
+            await using var fs = File.OpenRead(localPath);
+            return await JsonDocument.ParseAsync(fs, cancellationToken: ct);
+        }
 
         string manifestJson = await Http.Shared.GetStringAsync(
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", ct);
@@ -599,7 +602,8 @@ public static class GameInstaller
             string dest = Path.Combine(VersionsDir, versionId, versionId + ".json");
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             await DownloadAsync(url, dest, null, ct, quiet: true);
-            return await JsonDocument.ParseAsync(File.OpenRead(dest), cancellationToken: ct);
+            await using var fs2 = File.OpenRead(dest);
+            return await JsonDocument.ParseAsync(fs2, cancellationToken: ct);
         }
         throw new Exception($"Version « {versionId} » introuvable chez Mojang.");
     }
@@ -675,7 +679,7 @@ public static class GameInstaller
             if (sha1 == null || await Sha1Async(dest, ct) == sha1) return;
         }
         Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-        for (int attempt = 1; ; attempt++)
+        for (int attempt = 1; attempt <= 3; attempt++)
         {
             try
             {
@@ -685,8 +689,8 @@ public static class GameInstaller
                 await resp.Content.CopyToAsync(fs, ct);
                 return;
             }
-            catch when (!quiet && attempt < 3) { await Task.Delay(500 * attempt, ct); }
-            catch when (quiet && File.Exists(dest)) { return; }
+            catch when (attempt < 3) { await Task.Delay(500 * attempt, ct); }
+            catch when (quiet) { return; }
         }
     }
 

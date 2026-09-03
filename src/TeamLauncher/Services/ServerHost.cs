@@ -12,7 +12,7 @@ namespace TeamLauncher;
 /// </summary>
 public static class ServerHost
 {
-    private static readonly Dictionary<string, Process> Running = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Process> Running = new();
 
     public static string Root => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -416,7 +416,7 @@ public static class ServerHost
             // Sauvegarde automatique du monde à l'arrêt du serveur
             try { BackupWorld(s); } catch { }
 
-            if (AutoStart.Remove(s.Id))
+            if (AutoStart.TryRemove(s.Id, out _))
             {
                 // redémarrage planifié : on relance directement
                 Emit(s.Id, "Relance du serveur…");
@@ -426,7 +426,7 @@ public static class ServerHost
                     try { Start(s); } catch (Exception ex) { Emit(s.Id, "Échec de relance : " + ex.Message); }
                 });
             }
-            else if (!ManualStop.Remove(s.Id) && s.AutoRestart)
+            else if (!ManualStop.TryRemove(s.Id, out _) && s.AutoRestart)
             {
                 // arrêt inattendu : relance automatique
                 Emit(s.Id, "Le serveur s'est arrêté de façon inattendue. Relance automatique dans 10 s…");
@@ -453,7 +453,7 @@ public static class ServerHost
     public static void Stop(HostedServer s)
     {
         if (!IsRunning(s)) return;
-        ManualStop.Add(s.Id);
+        ManualStop.TryAdd(s.Id, true);
         try
         {
             Running[s.Id].StandardInput.WriteLine("stop");
@@ -474,9 +474,9 @@ public static class ServerHost
         catch { }
     }
 
-    private static readonly HashSet<string> ManualStop = new();
-    private static readonly Dictionary<string, bool> AutoStart = new();
-    private static readonly Dictionary<string, string> LastDailyRun = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> ManualStop = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> AutoStart = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> LastDailyRun = new();
     private static System.Threading.Timer? _scheduleWatchdog;
 
     public static bool IsRunningId(string id) =>
@@ -555,7 +555,7 @@ public static class ServerHost
     {
         Stop(s);
         StopTunnel(s.Id);
-        Running.Remove(s.Id);
+        Running.TryRemove(s.Id, out _);
         try { if (Directory.Exists(Dir(s))) Directory.Delete(Dir(s), recursive: true); } catch { }
     }
 
@@ -564,7 +564,7 @@ public static class ServerHost
         LogEmitted?.Invoke(id, line);
         try
         {
-            File.AppendAllText(Path.Combine(Dir(new HostedServer { Id = id }), "console.log"),
+            File.AppendAllText(Path.Combine(Root, id, "console.log"),
                 $"[{DateTime.Now:HH:mm:ss}] {line}\n");
         }
         catch { }
@@ -681,7 +681,7 @@ public static class ServerHost
 
     public static string TunnelExe => Path.Combine(Root, "playit-agent", "playit.exe");
 
-    private static readonly Dictionary<string, Process> Tunnels = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Process> Tunnels = new();
 
     /// <summary>Ligne émise par l'agent tunnel : (serverId, ligne).</summary>
     public static event Action<string, string>? TunnelEmitted;
@@ -773,6 +773,6 @@ public static class ServerHost
     {
         if (!Tunnels.TryGetValue(id, out var p)) return;
         try { if (!p.HasExited) p.Kill(entireProcessTree: true); } catch { }
-        Tunnels.Remove(id);
+        Tunnels.TryRemove(id, out _);
     }
 }

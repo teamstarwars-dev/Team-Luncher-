@@ -16,6 +16,9 @@ public static class DataStore
     public static string SkinsDir => Path.Combine(Dir, "skins");
     public static string ImagesDir => Path.Combine(Dir, "images");
 
+    private static bool _dirty;
+    private static System.Threading.Timer? _saveTimer;
+
     /// <summary>Paramètres par défaut embarqués dans l'exe (default.env).</summary>
     private static readonly Dictionary<string, string> Defaults = new(StringComparer.OrdinalIgnoreCase);
 
@@ -104,6 +107,27 @@ public static class DataStore
     }
 
     public static void Save()
+    {
+        _dirty = true;
+        _saveTimer ??= new System.Threading.Timer(_ =>
+        {
+            if (!_dirty) return;
+            _dirty = false;
+            DoSave();
+        }, null, 500, System.Threading.Timeout.Infinite);
+        _saveTimer.Change(500, System.Threading.Timeout.Infinite);
+    }
+
+    /// <summary>Écriture immédiate (utiliser à la fermeture de l'app).</summary>
+    public static void SaveNow()
+    {
+        _dirty = false;
+        _saveTimer?.Dispose();
+        _saveTimer = null;
+        DoSave();
+    }
+
+    private static void DoSave()
     {
         Directory.CreateDirectory(Dir);
         var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });

@@ -142,7 +142,9 @@ public static class Theme
             path.AddArc(0, c.Height - r - 1, r, r, 90, 90);
             path.CloseFigure();
             c.Region?.Dispose();
-            c.Region = new Region(path);
+            var region = new Region(path);
+            path.Dispose();
+            c.Region = region;
         }
         c.Resize += (_, _) => Apply();
         Apply();

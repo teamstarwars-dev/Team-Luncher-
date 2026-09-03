@@ -31,9 +31,10 @@ public static class HealthService
         bool net = false;
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
-            using var resp = await http.GetAsync(
-                "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(6));
+            using var resp = await Http.Shared.GetAsync(
+                "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+                HttpCompletionOption.ResponseHeadersRead, cts.Token);
             net = resp.IsSuccessStatusCode;
         }
         catch { }

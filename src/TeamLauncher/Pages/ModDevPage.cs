@@ -18,6 +18,7 @@ public class ModDevPage : UserControl, IRefreshable
     private readonly Button buildBtn = new();
     private readonly Button runBtn = new();
     private readonly Button openBtn = new();
+    private readonly TextBox cmdInput = new();
     private Process? currentProcess;
 
     private static readonly Dictionary<string, string[]> LoaderVersions = new()
@@ -37,17 +38,23 @@ public class ModDevPage : UserControl, IRefreshable
 
     private void BuildUI()
     {
-        var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Theme.Bg };
+        var scroll = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoScroll = true,
+            BackColor = Theme.Bg,
+            Padding = new Padding(0, 8, 0, 8)
+        };
 
         // ---- Header ----
-        var header = MakeHeader("🔨  Développement de Mods",
-            "Crée, build et test tes mods Minecraft directement depuis le launcher.");
-        scroll.Controls.Add(header);
+        scroll.Controls.Add(MakeHeader("🔨  Développement de Mods",
+            "Crée, build et test tes mods Minecraft directement depuis le launcher."));
 
         // ---- Section: Nouveau projet ----
-        var newProjPanel = MakeSection("NOUVEAU PROJET");
+        scroll.Controls.Add(MakeSectionLabel("NOUVEAU PROJET"));
 
-        // Loader
         var loaderRow = MakeRow();
         loaderRow.Controls.Add(MakeLabel("Loader :"));
         loaderBox.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -56,36 +63,32 @@ public class ModDevPage : UserControl, IRefreshable
         loaderBox.SelectedIndex = 0;
         loaderBox.SelectedIndexChanged += (_, _) => UpdateVersions();
         loaderRow.Controls.Add(loaderBox);
-        newProjPanel.Controls.Add(loaderRow);
+        scroll.Controls.Add(loaderRow);
 
-        // Version
         var versionRow = MakeRow();
         versionRow.Controls.Add(MakeLabel("Version MC :"));
         versionBox.DropDownStyle = ComboBoxStyle.DropDownList;
         versionBox.Width = 160;
         UpdateVersions();
         versionRow.Controls.Add(versionBox);
-        newProjPanel.Controls.Add(versionRow);
+        scroll.Controls.Add(versionRow);
 
-        // Project name
         var nameRow = MakeRow();
         nameRow.Controls.Add(MakeLabel("Nom du mod :"));
         projectNameBox.Width = 200;
         projectNameBox.Text = "mymod";
         Theme.ApplyInput(projectNameBox);
         nameRow.Controls.Add(projectNameBox);
-        newProjPanel.Controls.Add(nameRow);
+        scroll.Controls.Add(nameRow);
 
-        // Package
         var pkgRow = MakeRow();
         pkgRow.Controls.Add(MakeLabel("Package :"));
         packageBox.Width = 200;
         packageBox.Text = "com.example.mymod";
         Theme.ApplyInput(packageBox);
         pkgRow.Controls.Add(packageBox);
-        newProjPanel.Controls.Add(pkgRow);
+        scroll.Controls.Add(pkgRow);
 
-        // Path
         var pathRow = MakeRow();
         pathRow.Controls.Add(MakeLabel("Dossier :"));
         projectPathBox.Width = 280;
@@ -104,9 +107,8 @@ public class ModDevPage : UserControl, IRefreshable
                 projectPathBox.Text = fbd.SelectedPath;
         };
         pathRow.Controls.Add(browseBtn);
-        newProjPanel.Controls.Add(pathRow);
+        scroll.Controls.Add(pathRow);
 
-        // Create button
         createBtn.Text = "🚀  Créer le projet";
         createBtn.Height = 36;
         createBtn.Width = 180;
@@ -114,12 +116,10 @@ public class ModDevPage : UserControl, IRefreshable
         createBtn.Click += async (_, _) => await CreateProjectAsync();
         var btnRow = MakeRow();
         btnRow.Controls.Add(createBtn);
-        newProjPanel.Controls.Add(btnRow);
-
-        scroll.Controls.Add(newProjPanel);
+        scroll.Controls.Add(btnRow);
 
         // ---- Section: Build & Run ----
-        var buildPanel = MakeSection("BUILD & RUN");
+        scroll.Controls.Add(MakeSectionLabel("BUILD & RUN"));
 
         var actionRow = MakeRow();
 
@@ -156,32 +156,56 @@ public class ModDevPage : UserControl, IRefreshable
         Theme.Apply(openBtn);
         openBtn.Click += (_, _) =>
         {
-            string dir = projectPathBox.Text;
+            string dir = projectPathBox.Text.Trim();
             if (Directory.Exists(dir))
                 Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true });
         };
         actionRow.Controls.Add(openBtn);
-
-        buildPanel.Controls.Add(actionRow);
-        scroll.Controls.Add(buildPanel);
+        scroll.Controls.Add(actionRow);
 
         // ---- Section: Console ----
-        var consolePanel = MakeSection("CONSOLE");
+        scroll.Controls.Add(MakeSectionLabel("CONSOLE"));
 
-        consoleBox.Dock = DockStyle.Top;
-        consoleBox.Height = 300;
+        consoleBox.Width = 900;
+        consoleBox.Height = 250;
         consoleBox.BackColor = Color.FromArgb(30, 30, 30);
         consoleBox.ForeColor = Color.FromArgb(200, 200, 200);
         consoleBox.Font = new Font("Consolas", 9f);
         consoleBox.BorderStyle = BorderStyle.None;
         consoleBox.ReadOnly = true;
         consoleBox.WordWrap = false;
-        consolePanel.Controls.Add(consoleBox);
+        scroll.Controls.Add(consoleBox);
 
-        scroll.Controls.Add(consolePanel);
+        // Input pour écrire des commandes
+        cmdInput.Width = 900;
+        cmdInput.Height = 28;
+        cmdInput.BackColor = Color.FromArgb(50, 50, 55);
+        cmdInput.ForeColor = Color.FromArgb(200, 200, 200);
+        cmdInput.Font = new Font("Consolas", 9.5f);
+        cmdInput.BorderStyle = BorderStyle.FixedSingle;
+        cmdInput.PlaceholderText = "Tape une commande ici (ex: gradlew build)...";
+        cmdInput.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode != Keys.Enter || string.IsNullOrWhiteSpace(cmdInput.Text)) return;
+            e.SuppressKeyPress = true;
+            string cmd = cmdInput.Text.Trim();
+            cmdInput.Clear();
+            LogConsole($"$ {cmd}");
+
+            if (currentProcess != null && !currentProcess.HasExited)
+            {
+                try { currentProcess.StandardInput.WriteLine(cmd); }
+                catch { LogConsole("❌ Impossible d'écrire dans le processus."); }
+            }
+            else
+            {
+                _ = RunCommandAsync(cmd);
+            }
+        };
+        scroll.Controls.Add(cmdInput);
 
         // ---- Section: Ressources ----
-        var resPanel = MakeSection("RESSOURCES & DOCUMENTATION");
+        scroll.Controls.Add(MakeSectionLabel("RESSOURCES & DOCUMENTATION"));
 
         var links = new (string label, string url)[]
         {
@@ -195,6 +219,7 @@ public class ModDevPage : UserControl, IRefreshable
             ("CurseForge (Publish)", "https://www.curseforge.com/minecraft")
         };
 
+        var linksRow = MakeRow();
         foreach (var (label, url) in links)
         {
             var linkBtn = new Button
@@ -215,10 +240,9 @@ public class ModDevPage : UserControl, IRefreshable
             {
                 try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { }
             };
-            resPanel.Controls.Add(linkBtn);
+            linksRow.Controls.Add(linkBtn);
         }
-
-        scroll.Controls.Add(resPanel);
+        scroll.Controls.Add(linksRow);
 
         Controls.Add(scroll);
     }
@@ -486,6 +510,7 @@ mod_version=1.0.0
                 WorkingDirectory = dir,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
@@ -546,6 +571,7 @@ mod_version=1.0.0
                 WorkingDirectory = dir,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
@@ -586,6 +612,50 @@ mod_version=1.0.0
         consoleBox.SelectionColor = color;
         consoleBox.AppendText(text + "\n");
         consoleBox.SelectionStart = consoleBox.TextLength;
+    }
+
+    private async Task RunCommandAsync(string cmd)
+    {
+        try
+        {
+            var parts = cmd.Split(' ', 2);
+            var psi = new ProcessStartInfo
+            {
+                FileName = parts[0],
+                Arguments = parts.Length > 1 ? parts[1] : "",
+                WorkingDirectory = projectPathBox.Text.Trim(),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            var proc = Process.Start(psi);
+            if (proc == null) return;
+
+            _ = Task.Run(async () =>
+            {
+                while (!proc.StandardOutput.EndOfStream)
+                {
+                    var line = await proc.StandardOutput.ReadLineAsync();
+                    if (line != null) BeginInvoke(() => LogConsole(line));
+                }
+            });
+            _ = Task.Run(async () =>
+            {
+                while (!proc.StandardError.EndOfStream)
+                {
+                    var line = await proc.StandardError.ReadLineAsync();
+                    if (line != null) BeginInvoke(() => LogConsole(line));
+                }
+            });
+
+            await proc.WaitForExitAsync();
+            LogConsole(proc.ExitCode == 0 ? "✅ Commande terminée" : $"❌ Code: {proc.ExitCode}");
+        }
+        catch (Exception ex)
+        {
+            LogConsole($"❌ {ex.Message}");
+        }
     }
 
     public void RefreshData() { }
@@ -644,6 +714,18 @@ mod_version=1.0.0
             Height = 38,
             Padding = new Padding(20, 4, 0, 4),
             AutoSize = false
+        };
+    }
+
+    private static Label MakeSectionLabel(string text)
+    {
+        return new Label
+        {
+            Text = text,
+            Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+            ForeColor = Theme.Accent,
+            AutoSize = true,
+            Margin = new Padding(20, 12, 0, 4)
         };
     }
 

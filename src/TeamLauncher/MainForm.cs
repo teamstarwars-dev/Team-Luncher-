@@ -188,6 +188,8 @@ public class MainForm : Form
         AddNav("servers", "🌐", "Serveurs", () => GetOrCreate("servers", () => new ServersPage()));
         AddNav("bedrock", "🪨", "Bedrock", () => GetOrCreate("bedrock", () => new BedrockPage()));
         AddNav("edit", "🗺️", "Éditeur de carte", () => GetOrCreate("edit", () => new MapEditorPage()));
+        AddNav("moddev", "🔨", "Développement de mods", () => GetOrCreate("moddev", () => new ModDevPage()));
+        AddNav("model3d", "🎨", "Modélisation 3D", () => GetOrCreate("model3d", () => new ModelViewerPage()));
 
         // Chip de compte (avatar + pseudo) — ajouté AVANT bottomNav pour s'afficher au-dessus
         accountChip = new Panel { Dock = DockStyle.Bottom, Height = 44, BackColor = Theme.Bg };
@@ -293,6 +295,8 @@ public class MainForm : Form
                     "servers" => new ServersPage(),
                     "bedrock" => new BedrockPage(),
                     "edit" => new MapEditorPage(),
+                    "moddev" => new ModDevPage(),
+                    "model3d" => new ModelViewerPage(),
                     "account" => new AccountPage(),
                     _ => new SettingsPage()
                 }), navButtons[idx]);

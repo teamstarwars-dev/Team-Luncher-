@@ -26,7 +26,7 @@ public static class DataStore
     {
         LoadDefaults();
 
-        if (!Settings.InstancesDir.Contains("TeamLauncher"))
+        if (string.IsNullOrWhiteSpace(Settings.InstancesDir) || !Settings.InstancesDir.Contains("TeamLauncher"))
             Settings.InstancesDir = Path.Combine(Dir, "instances");
 
         try
@@ -34,7 +34,12 @@ public static class DataStore
             if (File.Exists(FilePath))
             {
                 var loaded = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath));
-                if (loaded != null) Settings = loaded;
+                if (loaded != null)
+                {
+                    Settings = loaded;
+                    if (string.IsNullOrWhiteSpace(Settings.InstancesDir) || !Settings.InstancesDir.Contains("TeamLauncher"))
+                        Settings.InstancesDir = Path.Combine(Dir, "instances");
+                }
             }
         }
         catch { /* config corrompue : on garde les valeurs par défaut */ }

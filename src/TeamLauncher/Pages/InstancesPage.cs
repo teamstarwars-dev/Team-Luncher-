@@ -954,15 +954,18 @@ public class InstancesPage : UserControl, IRefreshable
         {
             try
             {
-                using var fs = File.OpenRead(inst.ImagePath);
-                using var ms = new MemoryStream();
-                fs.CopyTo(ms);
-                ms.Position = 0;
+                using var fullImg = Image.FromFile(inst.ImagePath);
+                var thumbBmp = new Bitmap(210, 110);
+                using (var g = Graphics.FromImage(thumbBmp))
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
+                    g.DrawImage(fullImg, 0, 0, 210, 110);
+                }
                 thumb = new PictureBox
                 {
                     Dock = DockStyle.Fill,
                     SizeMode = PictureBoxSizeMode.Zoom,
-                    Image = Image.FromStream(ms),
+                    Image = thumbBmp,
                     BackColor = Color.Transparent,
                     Cursor = Cursors.Hand
                 };
@@ -1122,7 +1125,10 @@ public class InstancesPage : UserControl, IRefreshable
         try
         {
             string path = Path.Combine(instDir, subDir);
-            return Directory.Exists(path) ? Directory.GetFiles(path, pattern).Length : 0;
+            if (!Directory.Exists(path)) return 0;
+            int count = 0;
+            foreach (var _ in Directory.EnumerateFiles(path, pattern)) count++;
+            return count;
         }
         catch { return 0; }
     }
@@ -1132,7 +1138,10 @@ public class InstancesPage : UserControl, IRefreshable
         try
         {
             string path = Path.Combine(instDir, subDir);
-            return Directory.Exists(path) ? Directory.GetDirectories(path).Length : 0;
+            if (!Directory.Exists(path)) return 0;
+            int count = 0;
+            foreach (var _ in Directory.EnumerateDirectories(path)) count++;
+            return count;
         }
         catch { return 0; }
     }

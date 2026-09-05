@@ -1,15 +1,14 @@
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace TeamLauncher;
 
-/// <summary>
-/// Rendu 3D du modèle Minecraft joueur — exactement comme le vrai Minecraft.
-/// Chaque face = polygon rempli avec la couleur dominante de la zone UV + shading par face.
-/// Rotation souris, animation marche, zoom molette.
-/// </summary>
 public class SkinPreview : Control
 {
     private Bitmap? _skin;
+    private byte[]? _pixelData;
+    private int _stride;
     private float _rotY = 0.5f;
     private float _rotX = 0.15f;
     private float _zoom = 1f;
@@ -17,7 +16,18 @@ public class SkinPreview : Control
     private bool _walking;
     private bool _dragging;
     private Point _lastMouse;
-    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 33 };
+    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 100 };
+    private readonly Pen _outlinePen;
+    private readonly Font _infoFont;
+    private Color[]? _faceColors;
+
+    private struct FaceData
+    {
+        public PointF[] Pts;
+        public Color Color;
+        public float Depth;
+    }
+    private readonly List<FaceData> _faces = new(36);
 
     public bool Walking
     {
@@ -31,13 +41,17 @@ public class SkinPreview : Control
                  ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
         BackColor = Theme.Card;
         MinimumSize = new Size(120, 160);
-        _timer.Tick += (_, _) =>
-        {
-            if (_skin == null) return;
-            if (_walking) { _walkPhase += 0.12f; if (_walkPhase > MathF.PI * 2) _walkPhase -= MathF.PI * 2; }
-            else { _rotY += 0.03f; }
-            Invalidate();
-        };
+        _timer.Tick += OnTick;
+        _outlinePen = new Pen(Color.Black, 0.7f);
+        _infoFont = new Font("Consolas", 8f);
+    }
+
+    private void OnTick(object? sender, EventArgs e)
+    {
+        if (_skin == null) return;
+        if (_walking) { _walkPhase += 0.12f; if (_walkPhase > MathF.PI * 2) _walkPhase -= MathF.PI * 2; }
+        else { _rotY += 0.03f; }
+        Invalidate();
     }
 
     protected override void OnVisibleChanged(EventArgs e)
@@ -54,9 +68,86 @@ public class SkinPreview : Control
         var old = _skin;
         _skin = skin == null ? null : new Bitmap(skin, new Size(64, 64));
         old?.Dispose();
-        if (_skin != null) { _rotY = 0.5f; _walkPhase = 0; StartTimer(); }
-        else _timer.Stop();
+        if (_skin != null)
+        {
+            ExtractPixels();
+            PrecomputeFaceColors();
+            _rotY = 0.5f;
+            _walkPhase = 0;
+            StartTimer();
+        }
+        else
+        {
+            _pixelData = null;
+            _faceColors = null;
+            _timer.Stop();
+        }
         Invalidate();
+    }
+
+    private void ExtractPixels()
+    {
+        if (_skin == null) { _pixelData = null; return; }
+        var rect = new Rectangle(0, 0, 64, 64);
+        var bmpData = _skin.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        _stride = bmpData.Stride;
+        _pixelData = new byte[_stride * 64];
+        Marshal.Copy(bmpData.Scan0, _pixelData, 0, _pixelData.Length);
+        _skin.UnlockBits(bmpData);
+    }
+
+    private Color SampleFast(RectangleF uv)
+    {
+        if (_pixelData == null) return Color.FromArgb(180, 160, 140);
+        int x0 = Math.Clamp((int)uv.X, 0, 63), y0 = Math.Clamp((int)uv.Y, 0, 63);
+        int x1 = Math.Clamp((int)uv.Right, 0, 63), y1 = Math.Clamp((int)uv.Bottom, 0, 63);
+        long r = 0, gg = 0, b = 0, cnt = 0;
+        for (int y = y0; y <= y1; y++)
+        {
+            int rowOff = y * _stride;
+            for (int x = x0; x <= x1; x++)
+            {
+                int off = rowOff + x * 4;
+                byte a = _pixelData[off + 3];
+                if (a < 128) continue;
+                r += _pixelData[off + 2];
+                gg += _pixelData[off + 1];
+                b += _pixelData[off];
+                cnt++;
+            }
+        }
+        if (cnt == 0) return Color.FromArgb(180, 160, 140);
+        return Color.FromArgb(255, (int)(r / cnt), (int)(gg / cnt), (int)(b / cnt));
+    }
+
+    private static Color ShiftBrightness(Color c, float shift)
+    {
+        int r = Math.Clamp((int)(c.R * (1f + shift)), 0, 255);
+        int g = Math.Clamp((int)(c.G * (1f + shift)), 0, 255);
+        int b = Math.Clamp((int)(c.B * (1f + shift)), 0, 255);
+        return Color.FromArgb(c.A, r, g, b);
+    }
+
+    private void PrecomputeFaceColors()
+    {
+        if (_pixelData == null) { _faceColors = null; return; }
+        RectangleF[] uvs = [
+            new(8, 8, 8, 8), new(24, 8, 8, 8), new(16, 8, 8, 8),
+            new(0, 8, 8, 8), new(8, 0, 8, 8), new(16, 0, 8, 8),
+            new(20, 20, 8, 12), new(32, 20, 8, 12), new(28, 20, 4, 12),
+            new(16, 20, 4, 12), new(20, 16, 8, 4), new(28, 16, 8, 4),
+            new(44, 20, 4, 12), new(52, 20, 4, 12), new(48, 20, 4, 12),
+            new(40, 20, 4, 12), new(44, 16, 4, 4), new(48, 16, 4, 4),
+            new(40, 52, 4, 12), new(48, 52, 4, 12), new(44, 52, 4, 12),
+            new(36, 52, 4, 12), new(44, 48, 4, 4), new(48, 48, 4, 4),
+            new(4, 20, 4, 12), new(12, 20, 4, 12), new(8, 20, 4, 12),
+            new(0, 20, 4, 12), new(4, 16, 4, 4), new(8, 16, 4, 4),
+            new(20, 52, 4, 12), new(28, 52, 4, 12), new(24, 52, 4, 12),
+            new(16, 52, 4, 12), new(20, 48, 4, 4), new(24, 48, 4, 4)
+        ];
+        _faceColors = new Color[uvs.Length];
+        for (int i = 0; i < uvs.Length; i++)
+            _faceColors[i] = SampleFast(uvs[i]);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -68,14 +159,12 @@ public class SkinPreview : Control
 
         if (_skin == null || Width < 10 || Height < 10)
         {
-            using var f = new Font("Segoe UI", 9f);
-            var sz = TextRenderer.MeasureText("Aucun skin", f);
-            TextRenderer.DrawText(g, "Aucun skin", f,
+            var sz = TextRenderer.MeasureText("Aucun skin", _infoFont);
+            TextRenderer.DrawText(g, "Aucun skin", _infoFont,
                 new Point((Width - sz.Width) / 2, (Height - sz.Height) / 2), Theme.TextDim);
             return;
         }
 
-        // Fond dégradé
         using (var bg = new LinearGradientBrush(ClientRectangle,
             Color.FromArgb(40, 30, 50), Color.FromArgb(20, 20, 30), 90f))
             g.FillRectangle(bg, ClientRectangle);
@@ -103,119 +192,76 @@ public class SkinPreview : Control
 
         float Depth(float x, float z) => -x * sinY + z * cosY;
 
-        // Collect faces: polygon points + color + depth
-        var faces = new List<(PointF[] pts, Color color, float depth)>();
+        _faces.Clear();
+        int faceIdx = 0;
 
-        Color Sample(RectangleF uv)
-        {
-            int x0 = Math.Clamp((int)uv.X, 0, 63), y0 = Math.Clamp((int)uv.Y, 0, 63);
-            int x1 = Math.Clamp((int)uv.Right, 0, 63), y1 = Math.Clamp((int)uv.Bottom, 0, 63);
-            long r = 0, gg = 0, b = 0, cnt = 0;
-            for (int y = y0; y <= y1; y++)
-                for (int x = x0; x <= x1; x++)
-                {
-                    var c = _skin.GetPixel(x, y);
-                    if (c.A < 128) continue;
-                    r += c.R; gg += c.G; b += c.B; cnt++;
-                }
-            if (cnt == 0) return Color.FromArgb(180, 160, 140);
-            return Color.FromArgb(255, (int)(r / cnt), (int)(gg / cnt), (int)(b / cnt));
-        }
-
-        void AddFace(RectangleF uv, float shade,
+        void AddFace(float shade,
             (float X, float Y, float Z) a, (float X, float Y, float Z) b,
             (float X, float Y, float Z) c, (float X, float Y, float Z) d)
         {
             var pts = new[] { Project(a.X, a.Y, a.Z), Project(b.X, b.Y, b.Z),
                               Project(c.X, c.Y, c.Z), Project(d.X, d.Y, d.Z) };
             float depth = (Depth(a.X, a.Z) + Depth(b.X, b.Z) + Depth(c.X, c.Z) + Depth(d.X, d.Z)) / 4f;
-            Color baseColor = Sample(uv);
-            Color shaded = ShiftBrightness(baseColor, shade);
-            faces.Add((pts, shaded, depth));
+            Color baseColor = _faceColors?[faceIdx] ?? Color.FromArgb(180, 160, 140);
+            faceIdx++;
+            _faces.Add(new FaceData { Pts = pts, Color = ShiftBrightness(baseColor, shade), Depth = depth });
         }
 
-        void Box(float x0, float x1, float y0, float y1, float z0, float z1,
-            RectangleF front, RectangleF back, RectangleF left, RectangleF right, RectangleF top, RectangleF bottom)
+        void Box(float x0, float x1, float y0, float y1, float z0, float z1)
         {
-            // Comme Minecraft : chaque face a un éclairage différent
-            // Top = +20%, Front = 0%, Right = -10%, Left = -20%, Back = -15%, Bottom = -30%
-            AddFace(front,  0f,      (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1));
-            AddFace(back,  -0.15f,  (x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0));
-            AddFace(left,  -0.20f,  (x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0));
-            AddFace(right, -0.10f,  (x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1));
-            AddFace(top,    0.20f,  (x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1));
-            AddFace(bottom,-0.30f,  (x0, y0, z1), (x1, y0, z1), (x1, y0, z0), (x0, y0, z0));
+            AddFace(0f,     (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1));
+            AddFace(-0.15f, (x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0));
+            AddFace(-0.20f, (x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0));
+            AddFace(-0.10f, (x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1));
+            AddFace(0.20f,  (x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1));
+            AddFace(-0.30f, (x0, y0, z1), (x1, y0, z1), (x1, y0, z0), (x0, y0, z0));
         }
 
-        // === MODELE MINECRAFT 1.8+ (proportions exactes) ===
-        // Tête 8x8x8, Y = -12 à -4
-        Box(-4, 4, -12, -4, -4, 4,
-            new(8, 8, 8, 8), new(24, 8, 8, 8), new(16, 8, 8, 8),
-            new(0, 8, 8, 8), new(8, 0, 8, 8), new(16, 0, 8, 8));
-
-        // Corps 8x12x4, Y = -4 à 8
-        Box(-4, 4, -4, 8, -2, 2,
-            new(20, 20, 8, 12), new(32, 20, 8, 12), new(28, 20, 4, 12),
-            new(16, 20, 4, 12), new(20, 16, 8, 4), new(28, 16, 8, 4));
-
-        // Bras gauche 4x12x4, pivot épaule Y=-4
+        // Tête 8x8x8
+        Box(-4, 4, -12, -4, -4, 4);
+        // Corps 8x12x4
+        Box(-4, 4, -4, 8, -2, 2);
+        // Bras gauche
         {
             float rot = -armSwing;
             float ox = MathF.Sin(rot) * 3f, oz = MathF.Cos(rot) * -1f;
-            Box(-6 + ox, -2 + ox, -4, 8, -2 + oz, 2 + oz,
-                new(44, 20, 4, 12), new(52, 20, 4, 12), new(48, 20, 4, 12),
-                new(40, 20, 4, 12), new(44, 16, 4, 4), new(48, 16, 4, 4));
+            Box(-6 + ox, -2 + ox, -4, 8, -2 + oz, 2 + oz);
         }
-
-        // Bras droit 4x12x4
+        // Bras droit
         {
             float rot = armSwing;
             float ox = MathF.Sin(rot) * -3f, oz = MathF.Cos(rot) * 1f;
-            Box(2 + ox, 6 + ox, -4, 8, -2 + oz, 2 + oz,
-                new(40, 52, 4, 12), new(48, 52, 4, 12), new(44, 52, 4, 12),
-                new(36, 52, 4, 12), new(44, 48, 4, 4), new(48, 48, 4, 4));
+            Box(2 + ox, 6 + ox, -4, 8, -2 + oz, 2 + oz);
         }
-
-        // Jambe gauche 4x12x4, pivot hanche Y=8
+        // Jambe gauche
         {
             float ox = MathF.Sin(legSwing) * 2f, oz = MathF.Cos(legSwing) * -1f;
-            Box(-4 + ox, ox, 8, 20, -2 + oz, 2 + oz,
-                new(4, 20, 4, 12), new(12, 20, 4, 12), new(8, 20, 4, 12),
-                new(0, 20, 4, 12), new(4, 16, 4, 4), new(8, 16, 4, 4));
+            Box(-4 + ox, ox, 8, 20, -2 + oz, 2 + oz);
         }
-
-        // Jambe droite 4x12x4
+        // Jambe droite
         {
             float ox = MathF.Sin(-legSwing) * -2f, oz = MathF.Cos(-legSwing) * 1f;
-            Box(ox, 4 + ox, 8, 20, -2 + oz, 2 + oz,
-                new(20, 52, 4, 12), new(28, 52, 4, 12), new(24, 52, 4, 12),
-                new(16, 52, 4, 12), new(20, 48, 4, 4), new(24, 48, 4, 4));
+            Box(ox, 4 + ox, 8, 20, -2 + oz, 2 + oz);
         }
 
-        // Dessiner de l'arrière vers l'avant (painter's algorithm)
-        foreach (var (pts, color, depth) in faces.OrderByDescending(f => f.depth))
+        // Sort by depth (painter's algorithm)
+        if (_faces.Count > 1)
         {
-            using var brush = new SolidBrush(color);
-            g.FillPolygon(brush, pts);
-            using var pen = new Pen(ControlPaint.Dark(color, 0.2f), 0.7f);
-            g.DrawPolygon(pen, pts);
+            var arr = _faces.ToArray();
+            Array.Sort(arr, (a, b) => b.Depth.CompareTo(a.Depth));
+            foreach (var f in arr)
+            {
+                _outlinePen.Color = ControlPaint.Dark(f.Color, 0.2f);
+                using var brush = new SolidBrush(f.Color);
+                g.FillPolygon(brush, f.Pts);
+                g.DrawPolygon(_outlinePen, f.Pts);
+            }
         }
 
-        // Overlay texte
-        using var infoFont = new Font("Consolas", 8f);
         TextRenderer.DrawText(g, "Glisser = tourner | Molette = zoom",
-            infoFont, new Point(4, 4), Color.FromArgb(100, 200, 200, 200));
+            _infoFont, new Point(4, 4), Color.FromArgb(100, 200, 200, 200));
     }
 
-    private static Color ShiftBrightness(Color c, float shift)
-    {
-        int r = Math.Clamp((int)(c.R * (1f + shift)), 0, 255);
-        int g = Math.Clamp((int)(c.G * (1f + shift)), 0, 255);
-        int b = Math.Clamp((int)(c.B * (1f + shift)), 0, 255);
-        return Color.FromArgb(c.A, r, g, b);
-    }
-
-    // === Mouse ===
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
@@ -253,7 +299,13 @@ public class SkinPreview : Control
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) { _timer.Stop(); _timer.Dispose(); _skin?.Dispose(); }
+        if (disposing)
+        {
+            _timer.Stop(); _timer.Dispose();
+            _skin?.Dispose();
+            _outlinePen.Dispose();
+            _infoFont.Dispose();
+        }
         base.Dispose(disposing);
     }
 }

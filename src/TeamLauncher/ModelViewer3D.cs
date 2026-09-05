@@ -270,7 +270,9 @@ public class ModelViewer3D : Control
         }
 
         // Sort by depth (back to front)
-        foreach (var f in _faceBuffer.OrderByDescending(f => f.Depth))
+        var sorted = _faceBuffer.ToArray();
+        Array.Sort(sorted, (a, b) => b.Depth.CompareTo(a.Depth));
+        foreach (var f in sorted)
         {
             using var brush = new SolidBrush(f.Color);
             g.FillPolygon(brush, f.Points);

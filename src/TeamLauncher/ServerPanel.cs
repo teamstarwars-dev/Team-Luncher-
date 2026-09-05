@@ -18,6 +18,7 @@ public class ServerPanel : UserControl
     private readonly Panel _content;
     private readonly Button _startBtn;
     private Button? _activeNav;
+    private int _cachedJavaPid;
 
     public ServerPanel(HostedServer server)
     {
@@ -253,6 +254,7 @@ public class ServerPanel : UserControl
         if (!ServerHost.IsRunning(_server) || IsDisposed)
         {
             _monitorTimer.Stop();
+            _cachedJavaPid = 0;
             _monitorLbl.Text = $"{_server.Loader} {_server.McVersion}  •  port {_server.Port}  •  ○ Arrêté";
             _startBtn.Text = Lang.T("▶ Démarrer", "▶ Start");
             _startBtn.BackColor = Theme.Accent;
@@ -267,15 +269,24 @@ public class ServerPanel : UserControl
 
         try
         {
-            var proc = Process.GetProcessById(
-                Process.GetProcessesByName("java")
-                    .FirstOrDefault(p =>
-                    {
-                        try { return p.MainModule?.FileName?.Contains("javaw") == true; }
-                        catch { return false; }
-                    })?.Id ?? 0);
-            if (proc != null)
+            // Cache the PID: only rescan if cached process is dead
+            if (_cachedJavaPid == 0 || IsProcessDead(_cachedJavaPid))
             {
+                _cachedJavaPid = 0;
+                foreach (var p in Process.GetProcessesByName("java"))
+                {
+                    try
+                    {
+                        if (p.MainModule?.FileName?.Contains("javaw") == true)
+                        { _cachedJavaPid = p.Id; break; }
+                    }
+                    catch { }
+                    finally { p.Dispose(); }
+                }
+            }
+            if (_cachedJavaPid != 0)
+            {
+                using var proc = Process.GetProcessById(_cachedJavaPid);
                 long ramMb = proc.WorkingSet64 / 1024 / 1024;
                 double cpu = proc.TotalProcessorTime.TotalMilliseconds
                     / (DateTime.Now - proc.StartTime).TotalMilliseconds * 100;
@@ -283,6 +294,12 @@ public class ServerPanel : UserControl
             }
         }
         catch { }
+    }
+
+    private static bool IsProcessDead(int pid)
+    {
+        try { using var p = Process.GetProcessById(pid); return false; }
+        catch { return true; }
     }
 
     // ============ NAV PAGES ============

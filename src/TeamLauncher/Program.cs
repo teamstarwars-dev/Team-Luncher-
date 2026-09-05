@@ -7,6 +7,19 @@ internal static class Program
     [STAThread]
     private static void Main()
     {
+        // ---- Vérification .NET 8 Desktop Runtime ----
+        // Si le runtime n'est pas installé, afficher un message clair et quitter.
+        if (!IsDotNet8Installed())
+        {
+            MessageBox.Show(
+                "Team Launcher nécessite le .NET 8 Desktop Runtime pour fonctionner.\n\n" +
+                "Télécharge-le ici :\nhttps://dotnet.microsoft.com/download/dotnet/8.0\n\n" +
+                "Installe « .NET Desktop Runtime 8.0.x » (pas le SDK), puis relance le launcher.",
+                "Team Launcher — Runtime manquant",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
         // ---- Gestionnaire d'erreurs global ----
         // Sans ça, si une exception survient (registry, .NET manquant, ressource corrompue…),
         // l'exe se ferme SILENCIEUSEMENT sans aucun message.
@@ -132,5 +145,15 @@ internal static class Program
             cmdKey.SetValue("", $"\"{exePath}\" \"%1\"");
         }
         catch { }
+    }
+
+    private static bool IsDotNet8Installed()
+    {
+        try
+        {
+            string? version = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
+            return !string.IsNullOrEmpty(version) && version.Contains("8.");
+        }
+        catch { return false; }
     }
 }

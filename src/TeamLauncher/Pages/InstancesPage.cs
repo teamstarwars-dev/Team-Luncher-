@@ -8,6 +8,7 @@ public class InstancesPage : UserControl, IRefreshable
     private readonly FlowLayoutPanel cardsFlow = new();
     private TextBox filterBox = new();
     private Label emptyLabel = new();
+    private System.Windows.Forms.Timer? _filterDebounce;
 
     private static readonly Font CardNameFont = new("Segoe UI", 10f, FontStyle.Bold);
     private static readonly Font CardMetaFont = new("Segoe UI", 8f);
@@ -69,7 +70,9 @@ public class InstancesPage : UserControl, IRefreshable
             Location = new Point(0, 128)
         };
         Theme.ApplyInput(filterBox);
-        filterBox.TextChanged += (_, _) => RefreshData();
+        _filterDebounce = new System.Windows.Forms.Timer { Interval = 200 };
+        _filterDebounce.Tick += (_, _) => { _filterDebounce.Stop(); RefreshData(); };
+        filterBox.TextChanged += (_, _) => { _filterDebounce.Stop(); _filterDebounce.Start(); };
 
         emptyLabel.ForeColor = Theme.TextDim;
         emptyLabel.Font = new Font("Segoe UI", 9.5f);

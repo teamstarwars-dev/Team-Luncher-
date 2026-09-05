@@ -131,9 +131,12 @@ public static class Theme
     /// <summary>Coins arrondis (réappliqués au redimensionnement).</summary>
     public static void Round(Control c, int radius)
     {
+        int lastW = 0, lastH = 0;
         void Apply()
         {
             if (c.Width <= 0 || c.Height <= 0) return;
+            if (c.Width == lastW && c.Height == lastH) return;
+            lastW = c.Width; lastH = c.Height;
             int r = Math.Min(radius, Math.Min(c.Width, c.Height) / 2);
             var path = new System.Drawing.Drawing2D.GraphicsPath();
             path.AddArc(0, 0, r, r, 180, 90);

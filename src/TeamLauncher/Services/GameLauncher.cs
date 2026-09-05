@@ -647,7 +647,7 @@ public static class GameLauncher
         private readonly Label statusLabel = new();
         private readonly Panel track = new();
         private readonly Panel fill = new();
-        private readonly System.Windows.Forms.Timer marqueeTimer = new() { Interval = 25 };
+        private readonly System.Windows.Forms.Timer marqueeTimer = new() { Interval = 60 };
         private int marqueePos = -60;
         private bool indeterminate = true;
 

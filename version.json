@@ -1,5 +1,5 @@
 {
-  "version": "3.5.8",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.8/TeamLauncher.exe",
-  "changelog": "v3.5.8 — Fix crash + detection .NET au demarrage"
+  "version": "3.5.9",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.9/TeamLauncher.exe",
+  "changelog": "v3.5.9 — Optimisations performances pour PC faibles"
 }

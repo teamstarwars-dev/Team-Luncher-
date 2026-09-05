@@ -242,8 +242,8 @@ public class ServerPanel : UserControl
             {
                 if (_logBox.IsDisposed) return;
                 _logBox.AppendText(line + Environment.NewLine);
-                if (_logBox.Lines.Length > 1000)
-                    _logBox.Lines = _logBox.Lines[^800..];
+                if (_logBox.TextLength > 80000)
+                    _logBox.Text = _logBox.Text[^60000..];
             });
         }
         catch { }

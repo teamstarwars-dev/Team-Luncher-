@@ -1,11 +1,12 @@
-## Performance — Optimisé pour PC faibles
-- SkinPreview : 69 000 GetPixel/sec → 0 (LockBits + cache couleur)
-- SkinPreview : timer 33ms → 100ms (10 FPS au lieu de 30)
-- InstancesPage : images redimensionnées à 210x110 au chargement
-- InstancesPage : EnumerateFiles au lieu de GetFiles (pas d'allocation tableau)
-- ModelViewer3D : Array.Sort au lieu de LINQ OrderByDescending
-- ServerPanel : cache du PID Java (pas de scan toutes les 3s)
+## Performance v2 — Encore plus optimisé
+- Filtre instances : debounce 200ms (pas de rebuild à chaque lettre)
+- ServerPanel : truncation par TextLength au lieu de Lines[] (pas d'allocation tableau)
+- Theme.Round : skip si taille identique (pas de Region recréée inutilement)
+- GameLauncher : marquee 25ms → 60ms
 
-## Fix
-- Crash "empty string" au démarrage corrigé
-- Détection .NET 8 au lancement avec message clair
+## Garde de la v3.5.8
+- SkinPreview : LockBits + cache couleur
+- InstancesPage : images redimensionnées
+- ModelViewer3D : Array.Sort
+- ServerPanel : cache PID Java
+- Détection .NET 8 au lancement

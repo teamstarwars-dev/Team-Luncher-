@@ -173,8 +173,12 @@ public static class UpdateService
 
             SetProgress("Installation…");
 
+            // Renommer les fichiers en cours d'exécution (autorisé sur Windows)
             if (File.Exists(oldExe)) File.Delete(oldExe);
             if (File.Exists(oldDll)) File.Delete(oldDll);
+            File.Move(exePath, oldExe);
+            if (File.Exists(dllPath)) File.Move(dllPath, oldDll);
+            Log("Anciens fichiers renommés en .old");
 
             Log("Extraction du zip…");
             using (var zip = ZipFile.OpenRead(tempZip))

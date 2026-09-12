@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0.5",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.5/TeamLauncher-update.zip",
-  "changelog": "v3.6.0.5 — Fix update : téléchargement zip complet (exe+dll)"
+  "version": "3.6.0.6",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.6/TeamLauncher-update.zip",
+  "changelog": "v3.6.0.6 — Fix update : renommer avant extraction"
 }

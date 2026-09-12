@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0.4",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.4/TeamLauncher.exe",
-  "changelog": "v3.6.0.4 — Fix boucle infinie de mise à jour"
+  "version": "3.6.0.5",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.5/TeamLauncher-update.zip",
+  "changelog": "v3.6.0.5 — Fix update : téléchargement zip complet (exe+dll)"
 }

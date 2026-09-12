@@ -393,37 +393,44 @@ public class SettingsPage : UserControl, IRefreshable
         };
         var checkUpdateBtn = new Button { Text = Lang.T("Vérifier maintenant", "Check now"), Width = 180, Height = 36 };
         Theme.Apply(checkUpdateBtn);
-        checkUpdateBtn.Click += async (_, _) =>
-        {
-            checkUpdateBtn.Enabled = false;
-            checkUpdateBtn.Text = Lang.T("Vérification...", "Checking...");
-            string result = await UpdateChecker.CheckNowAsync();
-            checkUpdateBtn.Enabled = true;
-            checkUpdateBtn.Text = Lang.T("Vérifier maintenant", "Check now");
-            if (result.Length > 0)
+            checkUpdateBtn.Click += async (_, _) =>
             {
+                checkUpdateBtn.Enabled = false;
+                checkUpdateBtn.Text = Lang.T("Vérification...", "Checking...");
+                
+                var info = await UpdateService.CheckAsync();
+                
+                checkUpdateBtn.Enabled = true;
+                checkUpdateBtn.Text = Lang.T("Vérifier maintenant", "Check now");
+                
+                if (info == null)
+                {
+                    MessageBox.Show($"Tu es déjà à la dernière version (v{UpdateService.CurrentVersion}).", "Team Launcher");
+                    return;
+                }
+
+                var result = $"Nouvelle version disponible : v{info.Value.Version}\n\n" +
+                             $"Tu es en v{UpdateService.CurrentVersion}\n\n" +
+                             $"Changelog :\n{info.Value.Changelog}";
+
                 var dlg = MessageBox.Show(result + "\n\nMettre à jour maintenant ?",
                     "Team Launcher — Mises à jour", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                
                 if (dlg == DialogResult.Yes)
                 {
-                    var info = await UpdateService.CheckAsync();
-                    if (info != null)
+                    try
                     {
-                        try
+                        await UpdateService.UpdateAsync(info.Value.Url, msg =>
                         {
-                            await UpdateService.UpdateAsync(info.Value.Url, msg =>
-                            {
-                                FindForm()?.BeginInvoke(() => FindForm()!.Text = $"Team Launcher — {msg}");
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher");
-                        }
+                            FindForm()?.BeginInvoke(() => FindForm()!.Text = $"Team Launcher — {msg}");
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Erreur :\n" + ex.Message, "Team Launcher");
                     }
                 }
-            }
-        };
+            };
         integrationItems.AddRange(new Control[] { versionLabel, checkUpdateBtn });
 
         // ---- Actualités + langue ----

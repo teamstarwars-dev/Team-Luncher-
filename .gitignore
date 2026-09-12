@@ -24,3 +24,4 @@ publish/TeamLauncher.pdb
 publish/*.dll
 publish/*.cor3.dll
 publish-sc/
+publish-test/

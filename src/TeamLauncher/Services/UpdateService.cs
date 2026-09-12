@@ -3,25 +3,13 @@ using System.Text.Json;
 
 namespace TeamLauncher;
 
-/// <summary>
-/// Mise à jour automatique du launcher.
-/// Vérifie un fichier version.json sur GitHub/serveur, télécharge et relance.
-/// Mode automatique : au démarrage, si une update existe → téléchargement + relance sans interaction.
-/// </summary>
 public static class UpdateService
 {
-    // URL par défaut (fallback si pas défini dans les settings)
     private const string DefaultVersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/master/version.json";
-    // Utilise Http.Shared (client HTTP partagé)
 
-    /// <summary>Version actuelle de l'exe.</summary>
     public static string CurrentVersion =>
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
-    /// <summary>
-    /// Vérifie au démarrage. Si une mise à jour est disponible,
-    /// la propose automatiquement à l'utilisateur (comme Numek Launcher).
-    /// </summary>
     public static async Task CheckOnStartupAsync()
     {
         try
@@ -29,7 +17,6 @@ public static class UpdateService
             var info = await CheckAsync();
             if (info == null) return;
 
-            // Proposer automatiquement la mise à jour
             var mainForm = Application.OpenForms.OfType<Form>().FirstOrDefault();
             if (mainForm == null) return;
 
@@ -45,10 +32,7 @@ public static class UpdateService
             {
                 try
                 {
-                    await UpdateAsync(info.Value.Url, msg =>
-                    {
-                        mainForm.BeginInvoke(() => mainForm.Text = $"Team Launcher — {msg}");
-                    });
+                    await UpdateAsync(info.Value.Url, mainForm);
                 }
                 catch (Exception ex)
                 {
@@ -64,7 +48,6 @@ public static class UpdateService
         catch { }
     }
 
-    /// <summary>Vérifie si une mise à jour existe. Retourne les infos ou null.</summary>
     public static async Task<(string Version, string Url, string Changelog)?> CheckAsync()
     {
         try
@@ -91,19 +74,24 @@ public static class UpdateService
         catch { return null; }
     }
 
-    /// <summary>Télécharge la mise à jour, remplace l'exe, relance.</summary>
-    public static async Task UpdateAsync(string downloadUrl, Action<string>? progress = null)
+    public static async Task UpdateAsync(string downloadUrl, Form owner)
     {
         string exePath = Environment.ProcessPath ?? "";
         if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
             throw new Exception("Impossible de trouver l'exe en cours.");
 
         string tempExe = exePath + ".update";
-        string backupExe = exePath + ".old";
+        string batPath = exePath + ".update.bat";
+
+        // Créer une ProgressBar dans le titre du formulaire
+        void SetProgress(string msg)
+        {
+            try { owner.BeginInvoke(() => owner.Text = $"Team Launcher — {msg}"); } catch { }
+        }
 
         try
         {
-            progress?.Invoke("Téléchargement de la mise à jour…");
+            SetProgress("Téléchargement… 0%");
 
             using var resp = await Http.Shared.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
             resp.EnsureSuccessStatusCode();
@@ -120,39 +108,44 @@ public static class UpdateService
                 await fs.WriteAsync(buffer.AsMemory(0, n));
                 read += n;
                 if (total > 0)
-                    progress?.Invoke($"Téléchargement : {read * 100 / total}%");
+                {
+                    int pct = (int)(read * 100 / total);
+                    SetProgress($"Téléchargement… {pct}%");
+                }
             }
             fs.Close();
 
-            progress?.Invoke("Installation…");
+            SetProgress("Installation…");
 
-            // Backup l'ancien exe
-            if (File.Exists(backupExe)) File.Delete(backupExe);
-            File.Move(exePath, backupExe);
+            // Script batch : attendre que l'exe se ferme, remplacer, relancer
+            string batContent = $@"
+@echo off
+timeout /t 2 /nobreak >nul
+del ""{exePath}"" 2>nul
+move /y ""{tempExe}"" ""{exePath}"" >nul 2>&1
+start """" ""{exePath}""
+del ""%~f0""
+";
+            File.WriteAllText(batPath, batContent);
 
-            // Remplacer
-            File.Move(tempExe, exePath);
+            // Lancer le batch puis quitter
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = batPath,
+                UseShellExecute = true,
+                CreateNoWindow = true
+            });
 
-            // Relancer
-            progress?.Invoke("Relance…");
-            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
-
-            // Quitter
             Environment.Exit(0);
         }
         catch
         {
-            // Rollback si échec
             if (File.Exists(tempExe)) { try { File.Delete(tempExe); } catch { } }
-            if (File.Exists(backupExe) && !File.Exists(exePath))
-            {
-                try { File.Move(backupExe, exePath); } catch { }
-            }
+            if (File.Exists(batPath)) { try { File.Delete(batPath); } catch { } }
             throw;
         }
     }
 
-    /// <summary>Propose la mise à jour à l'utilisateur (depuis les paramètres).</summary>
     public static async Task PromptUpdateAsync(Form owner)
     {
         var info = await CheckAsync();
@@ -174,10 +167,7 @@ public static class UpdateService
         {
             try
             {
-                await UpdateAsync(info.Value.Url, msg =>
-                {
-                    owner.BeginInvoke(() => owner.Text = $"Team Launcher — {msg}");
-                });
+                await UpdateAsync(info.Value.Url, owner);
             }
             catch (Exception ex)
             {

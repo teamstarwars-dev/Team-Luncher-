@@ -1,28 +1,10 @@
-## v3.6.0 — Correction Discord + VPS caché + 10 corrections de bugs
+## Fix mise à jour automatique
+- Le remplacement de l'exe utilise maintenant un script batch (évite le verrouillage Windows)
+- Barre de progression dans le titre pendant le téléchargement
+- Redémarrage automatique après installation
+- La popup ne réapparaît plus après la mise à jour
 
-### Discord Rich Presence
-- Fix : la Rich Presence ne se réactivait pas toute seule après l'avoir désactivée
-- Le toggle est maintenant respecté entre les sessions
-
-### VPS / Pterodactyl
-- Section VPS cachée dans les paramètres (réservée à l'admin)
-
-### Corrections de bugs
-- ServerHost : TunnelAddresses → ConcurrentDictionary (thread-safe)
-- GameLauncher : JavaMajorCache → ConcurrentDictionary (thread-safe)
-- GameLauncher : ProgressForm correctement disposée après usage
-- InstancesPage : ContextMenuStrip correctement disposé après usage
-- Theme : Title allouait un nouveau Font à chaque appel (fuite mémoire)
-- InstancesPage : formula import CurseForge ne crash plus si fermé pendant l'async
-- ServerPanel : code mort supprimé dans ShowPlayers
-
-### Performance (depuis v3.5.9)
-- SkinPreview : LockBits au lieu de GetPixel
-- InstancesPage : images redimensionnées + debounce filtre
-- ModelViewer3D : Array.Sort au lieu de LINQ
-- ServerPanel : cache PID Java
-- Theme.Round : skip si taille identique
-
-### Deux versions disponibles
-- **TeamLauncher.exe** (0.2 Mo) — nécessite .NET 8 Desktop Runtime
-- **TeamLauncher-v3.6.0-sc.zip** (67 Mo) — tout inclus, rien à installer
+## Garde de v3.6.0
+- Discord Rich Presence : toggle respecté entre les sessions
+- VPS / Pterodactyl caché des utilisateurs
+- 8 autres corrections de bugs + optimisations performances

@@ -420,10 +420,7 @@ public class SettingsPage : UserControl, IRefreshable
                 {
                     try
                     {
-                        await UpdateService.UpdateAsync(info.Value.Url, msg =>
-                        {
-                            FindForm()?.BeginInvoke(() => FindForm()!.Text = $"Team Launcher — {msg}");
-                        });
+                        await UpdateService.UpdateAsync(info.Value.Url, FindForm()!);
                     }
                     catch (Exception ex)
                     {

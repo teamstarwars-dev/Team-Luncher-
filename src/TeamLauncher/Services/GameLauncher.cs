@@ -264,7 +264,7 @@ public static class GameLauncher
             Directory.CreateDirectory(Path.GetDirectoryName(LogFile)!);
             File.AppendAllText(LogFile, $"[{DateTime.Now:HH:mm:ss}] {text}\n\n");
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] Log write failed: {ex.Message}"); }
     }
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll")]
@@ -454,7 +454,7 @@ public static class GameLauncher
                 while (!game.StandardError.EndOfStream)
                     await sw.WriteLineAsync(await game.StandardError.ReadLineAsync());
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] Game log writer failed: {ex.Message}"); }
         });
 
         return game;
@@ -583,7 +583,7 @@ public static class GameLauncher
                 if (Directory.Exists(dir))
                     candidates.AddRange(Directory.GetFiles(dir, "javaw.exe", SearchOption.AllDirectories));
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] Java scan failed ({dir}): {ex.Message}"); }
         }
 
         Scan(@"C:\Program Files\Java");
@@ -636,7 +636,7 @@ public static class GameLauncher
                 result = first == 1 ? int.Parse(m.Groups[2].Value) : first;
             }
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] Java version detection failed ({javawPath}): {ex.Message}"); }
         JavaMajorCache[javawPath] = result;
         Log($"Java détecté : {javawPath} → version {result}");
         return result;

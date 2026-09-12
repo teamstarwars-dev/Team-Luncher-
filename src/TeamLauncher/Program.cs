@@ -53,6 +53,11 @@ internal static class Program
             try { Velopack.VelopackApp.Build().Run(); } catch { }
 
             ApplicationConfiguration.Initialize();
+
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Any(a => a.Equals("--portable", StringComparison.OrdinalIgnoreCase)))
+                DataStore.IsPortable = true;
+
             DataStore.Load();
             Theme.Reload();
 
@@ -65,8 +70,6 @@ internal static class Program
 
             string? deepLink = null;
 
-            // Si lancé via un lien teamlauncher://, extraire l'URL
-            string[] args = Environment.GetCommandLineArgs();
             if (args.Length > 1 && args[1].StartsWith("teamlauncher://", StringComparison.OrdinalIgnoreCase))
                 deepLink = args[1];
 

@@ -184,7 +184,7 @@ out skel qt;";
             data.Entities.Add(entity);
         }
 
-        return ParseOverpassJson(json, minLon, minLat, maxLon, maxLat);
+        return data;
     }
 
     /// <summary>

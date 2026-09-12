@@ -9,6 +9,8 @@ namespace TeamLauncher;
 /// </summary>
 public class MapEditorPage : UserControl, IRefreshable
 {
+    private static readonly Font TabFont = new("Segoe UI", 8.75f);
+
     private readonly ComboBox instanceBox = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly FlowLayoutPanel worldsPanel = new();
     private readonly EditorCanvas canvas = new();
@@ -168,7 +170,7 @@ public class MapEditorPage : UserControl, IRefreshable
                 using (var b = new SolidBrush(Theme.Accent))
                     e.Graphics.FillRectangle(b, e.Bounds.X, e.Bounds.Bottom - 2, e.Bounds.Width, 2);
             TextRenderer.DrawText(e.Graphics, viewTabs.TabPages[e.Index].Text,
-                new Font("Segoe UI", 8.75f), e.Bounds,
+                TabFont, e.Bounds,
                 sel ? Theme.Text : Theme.TextDim,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         };
@@ -255,18 +257,18 @@ public class MapEditorPage : UserControl, IRefreshable
 
         try
         {
-            UpdateStats(Lang.T($"Récupération des données OSM pour « {name} »...", $"Fetching OSM data for \"{name}\"..."));
+            UpdateStats(string.Format(Lang.T("Récupération des données OSM pour « {0} »...", "Fetching OSM data for \"{0}\"..."), name));
 
             var progress = new Progress<string>(msg => UpdateStats(msg));
             var osmData = await CityGenerator.FetchOsmDataAsync(bbox, progress);
 
-            UpdateStats(Lang.T($"Placement de {osmData.Entities.Count} entités dans le monde...", $"Placing {osmData.Entities.Count} entities in world..."));
+            UpdateStats(string.Format(Lang.T("Placement de {0} entités dans le monde...", "Placing {0} entities in world..."), osmData.Entities.Count));
 
             int placed = await CityGenerator.GenerateInWorldAsync(worldPath, osmData, baseY: 64, progress);
 
-            UpdateStats(Lang.T($"Ville « {name} » générée ! {placed} blocs placés.", $"City \"{name}\" generated! {placed} blocks placed."));
+            UpdateStats(string.Format(Lang.T("Ville « {0} » générée ! {1} blocs placés.", "City \"{0}\" generated! {1} blocks placed."), name, placed));
             MessageBox.Show(
-                Lang.T($"Ville « {name} » générée avec succès !\n{placed} blocs placés dans le monde.", $"City \"{name}\" generated successfully!\n{placed} blocks placed in the world."),
+                string.Format(Lang.T("Ville « {0} » générée avec succès !\n{1} blocs placés dans le monde.", "City \"{0}\" generated successfully!\n{1} blocks placed in the world."), name, placed),
                 "Team Launcher");
         }
         catch (Exception ex)

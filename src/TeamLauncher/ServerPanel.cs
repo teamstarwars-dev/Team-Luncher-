@@ -98,7 +98,7 @@ public class ServerPanel : UserControl
             ("📁", Lang.T("Dossier", "Folder"), () =>
             {
                 try { Process.Start(new ProcessStartInfo(ServerHost.Dir(_server)) { UseShellExecute = true }); }
-                catch { }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] Open server folder failed: {ex.Message}"); }
             }),
         };
 
@@ -642,8 +642,8 @@ public class ServerPanel : UserControl
                 }
                 string addr = string.IsNullOrEmpty(_server.PublicAddress) ? "en attente…" : _server.PublicAddress;
                 MessageBox.Show(
-                    Lang.T($"Adresse publique : {addr}\n\nPartage cette adresse avec tes amis !",
-                        $"Public address: {addr}\n\nShare this address with your friends!"),
+                    string.Format(Lang.T("Adresse publique : {0}\n\nPartage cette adresse avec tes amis !",
+                        "Public address: {0}\n\nShare this address with your friends!"), addr),
                     "Team Launcher");
             }
             catch (Exception ex)
@@ -718,7 +718,7 @@ public class ServerPanel : UserControl
                 string backup = ServerHost.BackupWorld(_server);
                 System.IO.Compression.ZipFile.ExtractToDirectory(dlg.FileName, dest, true);
                 Notifier.Show(Lang.T("Map importée", "World imported"),
-                    Lang.T($"Backup dans : {Path.GetFileName(backup)}", $"Backup at: {Path.GetFileName(backup)}"));
+                    string.Format(Lang.T("Backup dans : {0}", "Backup at: {0}"), Path.GetFileName(backup)));
             }
             else if (Directory.Exists(dlg.FileName))
             {

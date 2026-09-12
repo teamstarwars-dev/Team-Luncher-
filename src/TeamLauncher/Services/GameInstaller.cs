@@ -687,6 +687,12 @@ public static class GameInstaller
                 resp.EnsureSuccessStatusCode();
                 await using var fs = File.Create(dest);
                 await resp.Content.CopyToAsync(fs, ct);
+                fs.Close();
+                if (sha1 != null && await Sha1Async(dest, ct) != sha1)
+                {
+                    File.Delete(dest);
+                    throw new IOException($"SHA1 mismatch for {Path.GetFileName(dest)}: expected {sha1}");
+                }
                 return;
             }
             catch when (attempt < 3) { await Task.Delay(500 * attempt, ct); }

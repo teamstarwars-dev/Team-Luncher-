@@ -19,6 +19,9 @@ public class WorldViewer3D : Control
     private string? _worldPath;
     private bool _loaded;
 
+    private static readonly Font _placeholderFont = new("Segoe UI", 11f);
+    private static readonly Font _infoFont = new("Consolas", 9f);
+
     private static readonly Dictionary<string, Color> BlockColors = new()
     {
         ["minecraft:grass_block"] = Color.FromArgb(90, 150, 50),
@@ -192,10 +195,9 @@ public class WorldViewer3D : Control
 
         if (!_loaded || _heightmap.Count == 0)
         {
-            using var f = new Font("Segoe UI", 11f);
             string msg = _worldPath == null ? "Charge un monde pour le visualiser." : "Chargement…";
-            var sz = TextRenderer.MeasureText(msg, f);
-            TextRenderer.DrawText(g, msg, f,
+            var sz = TextRenderer.MeasureText(msg, _placeholderFont);
+            TextRenderer.DrawText(g, msg, _placeholderFont,
                 new Point((Width - sz.Width) / 2, (Height - sz.Height) / 2), Theme.TextDim);
             return;
         }
@@ -261,10 +263,9 @@ public class WorldViewer3D : Control
                 new PointF(px, py + sz * 0.8f), new PointF(px + sz * 0.7f, py + sz * 0.4f) });
         }
 
-        using var infoFont = new Font("Consolas", 9f);
         TextRenderer.DrawText(g,
             $"Zoom: {_zoom:F1}x | Blocs: {_heightmap.Count:N0} | Rot: {(int)(_rotation * 180 / MathF.PI)}°",
-            infoFont, new Point(8, 8), Color.FromArgb(150, 200, 200, 200));
+            _infoFont, new Point(8, 8), Color.FromArgb(150, 200, 200, 200));
     }
 
     private static Color GetBlockColor(string block)

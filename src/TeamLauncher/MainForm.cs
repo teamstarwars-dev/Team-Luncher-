@@ -4,6 +4,8 @@ namespace TeamLauncher;
 
 public class MainForm : Form
 {
+    private static readonly Font NavIconFont = new("Segoe UI", 12f);
+
     private readonly Panel sideNav = new();
     private readonly ContentPanel content = new();
     private readonly List<Button> navButtons = new();
@@ -446,6 +448,9 @@ public class MainForm : Form
             DataStore.Settings.AutoShortcut = true;
             DataStore.Save();
         }
+
+        KeyPreview = true;
+        KeyDown += OnMainFormKeyDown;
     }
 
     private static void RebuildTaskPanel(FlowLayoutPanel panel)
@@ -542,6 +547,57 @@ public class MainForm : Form
         }
     }
 
+    private void OnMainFormKeyDown(object? sender, KeyEventArgs e)
+    {
+        // Ctrl+Tab / Ctrl+Shift+Tab : cycle through nav pages
+        if (e.Control && e.KeyCode == Keys.Tab)
+        {
+            int idx = navButtons.FindIndex(b => b.Tag is bool active && active);
+            if (idx < 0) idx = 0;
+
+            int next = e.Shift
+                ? (idx - 1 + navButtons.Count) % navButtons.Count
+                : (idx + 1) % navButtons.Count;
+
+            var page = GetOrCreate(navKeys[next], () => navKeys[next] switch
+            {
+                "home" => new HomePage(),
+                "news" => new NewsPage(),
+                "instances" => new InstancesPage(),
+                "explorer" => new ExplorerPage(),
+                "skins" => new SkinsPage(),
+                "explore" => new ExplorePage(),
+                "servers" => new ServersPage(),
+                "bedrock" => new BedrockPage(),
+                "edit" => new MapEditorPage(),
+                "moddev" => new ModDevPage(),
+                "model3d" => new ModelViewerPage(),
+                "account" => new AccountPage(),
+                _ => new SettingsPage()
+            });
+            Show(page, navButtons[next]);
+            e.Handled = true;
+            return;
+        }
+
+        // Escape : close any open dialog
+        if (e.KeyCode == Keys.Escape)
+        {
+            foreach (Form f in OwnedForms)
+                f.Close();
+            e.Handled = true;
+            return;
+        }
+
+        // F5 : refresh current page if it implements IRefreshable
+        if (e.KeyCode == Keys.F5)
+        {
+            if (content.Controls.Count > 0 && content.Controls[0] is IRefreshable r)
+                r.RefreshData();
+            e.Handled = true;
+        }
+    }
+
     /// <summary>Bordure dessinée autour de la fenêtre quand elle n'est pas maximisée.</summary>
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -596,7 +652,7 @@ public class MainForm : Form
             Margin = new Padding(0, 1, 0, 1),
             FlatStyle = FlatStyle.Flat,
             FlatAppearance = { MouseOverBackColor = Color.Transparent, BorderSize = 0 },
-            Font = new Font("Segoe UI", 12f),
+            Font = NavIconFont,
             ForeColor = Theme.TextDim,
             BackColor = Color.Transparent
         };

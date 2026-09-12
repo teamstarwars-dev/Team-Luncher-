@@ -317,7 +317,7 @@ public class SkinsPage : UserControl, IRefreshable
         }
         _selectedSkin = Path.Combine(DataStore.SkinsDir, Path.GetFileName(ofd.FileNames[0]));
         RefreshData();
-        statusLabel.Text = Lang.T($"{count} skin(s) importé(s)", $"{count} skin(s) imported");
+        statusLabel.Text = string.Format(Lang.T("{0} skin(s) importé(s)", "{0} skin(s) imported"), count);
     }
 
     private void ExportSelectedSkin()
@@ -393,7 +393,7 @@ public class SkinsPage : UserControl, IRefreshable
         }
         catch (Exception ex)
         {
-            statusLabel.Text = Lang.T($"Erreur: {ex.Message}", $"Error: {ex.Message}");
+            statusLabel.Text = string.Format(Lang.T("Erreur: {0}", "Error: {0}"), ex.Message);
         }
 
         _loadingOnline = false;
@@ -707,7 +707,7 @@ public class SkinsPage : UserControl, IRefreshable
         // Click: download skin and select
         EventHandler downloadAndSelect = async (_, _) =>
         {
-            statusLabel.Text = Lang.T($"Téléchargement de {skin.Name}...", $"Downloading {skin.Name}...");
+            statusLabel.Text = string.Format(Lang.T("Téléchargement de {0}...", "Downloading {0}..."), skin.Name);
             try
             {
                 using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
@@ -726,11 +726,11 @@ public class SkinsPage : UserControl, IRefreshable
                     }
                 }
                 RefreshData();
-                statusLabel.Text = Lang.T($"Skin « {skin.Name} » téléchargé !", $"Skin « {skin.Name} » downloaded!");
+                statusLabel.Text = string.Format(Lang.T("Skin « {0} » téléchargé !", "Skin « {0} » downloaded!"), skin.Name);
             }
             catch (Exception ex)
             {
-                statusLabel.Text = Lang.T($"Erreur: {ex.Message}", $"Error: {ex.Message}");
+                statusLabel.Text = string.Format(Lang.T("Erreur: {0}", "Error: {0}"), ex.Message);
             }
         };
         card.Click += downloadAndSelect;
@@ -738,7 +738,7 @@ public class SkinsPage : UserControl, IRefreshable
         nameLabel.Click += downloadAndSelect;
 
         var tip = new ToolTip();
-        tip.SetToolTip(card, Lang.T($"Cliquer pour télécharger « {skin.Name} »", $"Click to download « {skin.Name} »"));
+        tip.SetToolTip(card, string.Format(Lang.T("Cliquer pour télécharger « {0} »", "Click to download « {0} »"), skin.Name));
 
         return card;
     }
@@ -775,7 +775,7 @@ public class SkinsPage : UserControl, IRefreshable
     {
         string name = Path.GetFileNameWithoutExtension(file);
         var result = MessageBox.Show(
-            Lang.T($"Supprimer le skin « {name} » ?", $"Delete skin « {name} »?"),
+            string.Format(Lang.T("Supprimer le skin « {0} » ?", "Delete skin « {0} »?"), name),
             "Team Launcher",
             MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (result != DialogResult.Yes) return;
@@ -835,10 +835,10 @@ public class SkinsPage : UserControl, IRefreshable
 
         MessageBox.Show(
             errors.Count == 0
-                ? Lang.T($"Skin appliqué à {ok} instance(s).\nVisible au prochain lancement avec le pseudo « {DataStore.Settings.PlayerName} ».",
-                    $"Skin applied to {ok} instance(s).\nVisible on next launch with username « {DataStore.Settings.PlayerName} ».")
-                : Lang.T($"Appliqué à {ok} instance(s). Erreurs :\n" + string.Join("\n", errors.Take(4)),
-                    $"Applied to {ok} instance(s). Errors:\n" + string.Join("\n", errors.Take(4))),
+                ? string.Format(Lang.T("Skin appliqué à {0} instance(s).\nVisible au prochain lancement avec le pseudo « {1} ».",
+                    "Skin applied to {0} instance(s).\nVisible on next launch with username « {1} »."), ok, DataStore.Settings.PlayerName)
+                : string.Format(Lang.T("Appliqué à {0} instance(s). Erreurs :\n{1}",
+                    "Applied to {0} instance(s). Errors:\n{1}"), ok, string.Join("\n", errors.Take(4))),
             "Team Launcher");
     }
 

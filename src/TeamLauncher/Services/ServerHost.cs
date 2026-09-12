@@ -466,6 +466,14 @@ public static class ServerHost
     public static void SendCommand(string id, string command)
     {
         if (!IsRunningId(id)) return;
+        if (string.IsNullOrWhiteSpace(command)) return;
+
+        // Trim, truncate, and strip control characters (keep tab/newline)
+        command = command.Trim();
+        if (command.Length > 256) command = command[..256];
+        command = new string(command.Where(c => c >= ' ' || c is '\t' or '\n').ToArray());
+        if (command.Length == 0) return;
+
         try
         {
             Running[id].StandardInput.WriteLine(command);

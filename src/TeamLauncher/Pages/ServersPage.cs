@@ -12,6 +12,8 @@ namespace TeamLauncher;
 /// </summary>
 public class ServersPage : UserControl, IRefreshable
 {
+    private static readonly Font TabFont = new("Segoe UI", 8.75f);
+
     private readonly FlowLayoutPanel serverList = new();
     private readonly TextBox addressBox = new();
     private readonly FlowLayoutPanel cityList = new();
@@ -45,7 +47,7 @@ public class ServersPage : UserControl, IRefreshable
                 using (var b = new SolidBrush(Theme.Accent))
                     e.Graphics.FillRectangle(b, e.Bounds.X, e.Bounds.Bottom - 2, e.Bounds.Width, 2);
             TextRenderer.DrawText(e.Graphics, tabs.TabPages[e.Index].Text,
-                new Font("Segoe UI", 8.75f), e.Bounds,
+                TabFont, e.Bounds,
                 sel ? Theme.Text : Theme.TextDim,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         };
@@ -238,9 +240,9 @@ public class ServersPage : UserControl, IRefreshable
             if (hs == null) return;
             hs.PublicAddress = address;
             try { DataStore.Save(); } catch { }
-            Notifier.Show(hs.Name, Lang.T(
-                $"Adresse publique : {address} 🎉",
-                $"Public address: {address} 🎉"));
+            Notifier.Show(hs.Name, string.Format(Lang.T(
+                "Adresse publique : {0} 🎉",
+                "Public address: {0} 🎉"), address));
             if (IsHandleCreated) BeginInvoke(RefreshData);
         };
     }
@@ -253,7 +255,7 @@ public class ServersPage : UserControl, IRefreshable
             BeginInvoke(() =>
             {
                 if (_statusLabels.TryGetValue(id, out var lbl) && !lbl.IsDisposed)
-                    lbl.Text = Lang.T($"⬇ Téléchargement… {pct} %", $"⬇ Downloading… {pct}%");
+                    lbl.Text = string.Format(Lang.T("⬇ Téléchargement… {0} %", "⬇ Downloading… {0}%"), pct);
             });
         }
         catch { }
@@ -710,7 +712,7 @@ public class ServersPage : UserControl, IRefreshable
 
         var dlg = new Form
         {
-            Text = Lang.T($"Installer un modpack — {s.Name}", $"Install a modpack — {s.Name}"),
+            Text = string.Format(Lang.T("Installer un modpack — {0}", "Install a modpack — {0}"), s.Name),
             Size = new Size(600, 400), StartPosition = FormStartPosition.CenterParent,
             BackColor = Theme.Bg
         };
@@ -784,7 +786,7 @@ public class ServersPage : UserControl, IRefreshable
                 }
 
                 statusLabel.Text = resultsList.Items.Count > 0
-                    ? Lang.T($"{resultsList.Items.Count} résultat(s)", $"{resultsList.Items.Count} result(s)")
+                    ? string.Format(Lang.T("{0} résultat(s)", "{0} result(s)"), resultsList.Items.Count)
                     : Lang.T("Aucun résultat", "No results");
             }
             catch (Exception ex)
@@ -909,9 +911,9 @@ public class ServersPage : UserControl, IRefreshable
                 try { File.Delete(tempFile); } catch { }
 
                 statusLabel.Text = Lang.T("Modpack installé !", "Modpack installed!");
-                Notifier.Show(s.Name, Lang.T(
-                    $"Modpack « {slug} » installé ! Redémarre le serveur.",
-                    $"Modpack \"{slug}\" installed! Restart the server."));
+                Notifier.Show(s.Name, string.Format(Lang.T(
+                    "Modpack « {0} » installé ! Redémarre le serveur.",
+                    "Modpack \"{0}\" installed! Restart the server."), slug));
                 dlg.Close();
             }
             catch (Exception ex)
@@ -948,7 +950,7 @@ public class ServersPage : UserControl, IRefreshable
 
         var dlg = new Form
         {
-            Text = Lang.T($"Bibliothèque de mondes — {s.Name}", $"World Library — {s.Name}"),
+            Text = string.Format(Lang.T("Bibliothèque de mondes — {0}", "World Library — {0}"), s.Name),
             Size = new Size(600, 440), StartPosition = FormStartPosition.CenterParent,
             BackColor = Theme.Bg
         };
@@ -1303,7 +1305,8 @@ public class ServersPage : UserControl, IRefreshable
             // tunnel playit déjà configuré : on le relance avec le serveur
             if (!string.IsNullOrEmpty(s.PublicAddress))
             {
-                try { ServerHost.StartTunnel(s.Id); } catch { }
+                try { ServerHost.StartTunnel(s.Id); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] Tunnel start failed: {ex.Message}"); }
             }
 
             Notifier.Show(s.Name, Lang.T(

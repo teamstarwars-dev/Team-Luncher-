@@ -9,6 +9,9 @@ namespace TeamLauncher;
 /// </summary>
 public class ModelViewer3D : Control
 {
+    private static readonly Font EmptyFont = new("Segoe UI", 10f);
+    private static readonly Font InfoFont = new("Consolas", 9f);
+
     private readonly List<ModelElement> _elements = new();
     private float _angleX = 0.3f;
     private float _angleY = 0.5f;
@@ -188,9 +191,8 @@ public class ModelViewer3D : Control
 
         if (_elements.Count == 0)
         {
-            using var f = new Font("Segoe UI", 10f);
-            var sz = TextRenderer.MeasureText("Aucun modèle chargé.", f);
-            TextRenderer.DrawText(g, "Aucun modèle chargé.", f,
+            var sz = TextRenderer.MeasureText("Aucun modèle chargé.", EmptyFont);
+            TextRenderer.DrawText(g, "Aucun modèle chargé.", EmptyFont,
                 new Point((Width - sz.Width) / 2, (Height - sz.Height) / 2), Theme.TextDim);
             return;
         }
@@ -281,10 +283,9 @@ public class ModelViewer3D : Control
         }
 
         // Info
-        using var infoFont = new Font("Consolas", 9f);
         TextRenderer.DrawText(g,
             $"Éléments: {_elements.Count} | Zoom: {_zoom:F1}",
-            infoFont, new Point(8, 8), Color.FromArgb(150, 200, 200, 200));
+            InfoFont, new Point(8, 8), Color.FromArgb(150, 200, 200, 200));
     }
 
     protected override void OnMouseDown(MouseEventArgs e)

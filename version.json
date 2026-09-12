@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0.6",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.6/TeamLauncher-update.zip",
-  "changelog": "v3.6.0.6 — Fix update : renommer avant extraction"
+  "version": "4.0.0.0",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v4.0.0/TeamLauncher-update.zip",
+  "changelog": "v4.0.0 — CityGenerator fix, undo/redo, sécurité tokens, raccourcis clavier, mode portable, i18n fix, logging, SHA mods"
 }

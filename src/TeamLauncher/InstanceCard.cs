@@ -16,6 +16,9 @@ public static class InstanceCard
         };
         Theme.Blockify(card);
 
+        card.MouseEnter += (_, _) => card.BackColor = Theme.Hover;
+        card.MouseLeave += (_, _) => card.BackColor = Theme.Card;
+
         var name = new Label
         {
             Text = inst.Name,

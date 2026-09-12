@@ -9,6 +9,10 @@ namespace TeamLauncher;
 /// </summary>
 public class EditorCanvas : Control
 {
+    private static readonly Font EmptyFont = new("Segoe UI", 10f);
+    private static readonly Font InfoFont = new("Consolas", 9f);
+    private static readonly Font MarkerFont = new("Segoe UI", 8f, FontStyle.Bold);
+
     private readonly Dictionary<(int Rx, int Rz), byte[]> _tables = new();
     private readonly List<string> _paths = new();
     private readonly HashSet<(int Cx, int Cz)> _selected = new();
@@ -22,8 +26,8 @@ public class EditorCanvas : Control
     private (int X, int Y, int Z)? _pos1;
     private (int X, int Y, int Z)? _pos2;
     private List<((int X, int Y, int Z) Pos, string Block)> _clipboard = new();
-    private readonly List<byte[]> _undoStack = new();
-    private readonly List<byte[]> _redoStack = new();
+    private readonly List<Dictionary<string, byte[]>> _undoStack = new();
+    private readonly List<Dictionary<string, byte[]>> _redoStack = new();
 
     public int TotalChunks { get; private set; }
     public int SelectedCount => _selected.Count;
@@ -105,8 +109,7 @@ public class EditorCanvas : Control
 
         if (_tables.Count == 0)
         {
-            using var f = new Font("Segoe UI", 10f);
-            TextRenderer.DrawText(g, "Aucun monde chargé.", f,
+            TextRenderer.DrawText(g, "Aucun monde chargé.", EmptyFont,
                 new Point(Width / 2 - 70, Height / 2), Theme.TextDim);
             return;
         }
@@ -167,11 +170,10 @@ public class EditorCanvas : Control
         }
 
         // Info overlay
-        using var infoFont = new Font("Consolas", 9f);
         string info = $"Chunks: {TotalChunks:N0} | Sélectionnés: {_selected.Count}";
         if (_pos1.HasValue) info += $" | Pos1: ({_pos1.Value.X},{_pos1.Value.Y},{_pos1.Value.Z})";
         if (_pos2.HasValue) info += $" | Pos2: ({_pos2.Value.X},{_pos2.Value.Y},{_pos2.Value.Z})";
-        TextRenderer.DrawText(g, info, infoFont, new Point(8, 8), Color.FromArgb(150, 200, 200, 200));
+        TextRenderer.DrawText(g, info, InfoFont, new Point(8, 8), Color.FromArgb(150, 200, 200, 200));
     }
 
     private void DrawMarker(Graphics g, (int X, int Y, int Z) pos, Color color, string label)
@@ -183,9 +185,8 @@ public class EditorCanvas : Control
 
         using var brush = new SolidBrush(Color.FromArgb(120, color));
         g.FillEllipse(brush, px - sz / 2, py - sz / 2, sz, sz);
-        using var font = new Font("Segoe UI", 8f, FontStyle.Bold);
-        var ts = TextRenderer.MeasureText(label, font);
-        TextRenderer.DrawText(g, label, font,
+        var ts = TextRenderer.MeasureText(label, MarkerFont);
+        TextRenderer.DrawText(g, label, MarkerFont,
             new Point((int)(px - ts.Width / 2), (int)(py - ts.Height / 2)), Color.White);
     }
 
@@ -556,13 +557,16 @@ public class EditorCanvas : Control
         catch { return false; }
     }
 
-    private byte[] SaveRegionSnapshot()
+    private Dictionary<string, byte[]> SaveRegionSnapshot()
     {
-        if (_worldPath == null) return Array.Empty<byte>();
-        var ms = new MemoryStream();
+        var snapshot = new Dictionary<string, byte[]>();
+        if (_worldPath == null) return snapshot;
         foreach (var file in _paths)
-            ms.Write(File.ReadAllBytes(file));
-        return ms.ToArray();
+        {
+            try { snapshot[file] = File.ReadAllBytes(file); }
+            catch { snapshot[file] = Array.Empty<byte>(); }
+        }
+        return snapshot;
     }
 
     private void SaveUndo()
@@ -579,15 +583,16 @@ public class EditorCanvas : Control
         if (_redoStack.Count > 20) _redoStack.RemoveAt(0);
     }
 
-    private void RestoreRegionFiles(byte[] snapshot)
+    private void RestoreRegionFiles(Dictionary<string, byte[]> snapshot)
     {
-        int offset = 0;
-        foreach (var file in _paths)
+        foreach (var kvp in snapshot)
         {
-            if (offset + 4 > snapshot.Length) break;
-            // On ne peut pas restaurer sans taille, on re-sauvegarde les fichiers.
-            // Simplification: on garde juste le nombre d'octets par fichier.
-            break;
+            try
+            {
+                if (kvp.Value.Length > 0)
+                    File.WriteAllBytes(kvp.Key, kvp.Value);
+            }
+            catch { }
         }
     }
 }

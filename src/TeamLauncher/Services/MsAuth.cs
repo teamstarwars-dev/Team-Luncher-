@@ -100,9 +100,24 @@ public static class MsAuth
 
             string name = root.GetProperty("name").GetString()!;
             string uuid = root.GetProperty("uuid").GetString()!;
-            string token = root.GetProperty("token").GetString()!;
+            string tokenRaw = root.GetProperty("token").GetString()!;
 
-            if (string.IsNullOrEmpty(token) || token == "0") { AuthLog("Cache disque : token vide."); return null; }
+            if (string.IsNullOrEmpty(tokenRaw) || tokenRaw == "0") { AuthLog("Cache disque : token vide."); return null; }
+
+            // Déchiffrer le token (DPAPI) ou supporter l'ancien format en clair
+            string token;
+            try
+            {
+                byte[] clear = System.Security.Cryptography.ProtectedData.Unprotect(
+                    Convert.FromBase64String(tokenRaw), null,
+                    System.Security.Cryptography.DataProtectionScope.CurrentUser);
+                token = Encoding.UTF8.GetString(clear);
+            }
+            catch
+            {
+                token = tokenRaw; // ancien format en clair
+            }
+
             AuthLog($"Cache disque : OK (nom={name}).");
             return new McSession(name, uuid, token);
         }
@@ -114,16 +129,20 @@ public static class MsAuth
         try
         {
             Directory.CreateDirectory(DataDir);
+            // Chiffrer le token avec DPAPI
+            byte[] cipher = System.Security.Cryptography.ProtectedData.Protect(
+                Encoding.UTF8.GetBytes(session.AccessToken), null,
+                System.Security.Cryptography.DataProtectionScope.CurrentUser);
             var obj = new
             {
                 name = session.Name,
                 uuid = session.Uuid,
-                token = session.AccessToken,
+                token = Convert.ToBase64String(cipher),
                 ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
             File.WriteAllText(SessionFile, JsonSerializer.Serialize(obj));
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] SaveSessionCache failed: {ex.Message}"); }
     }
 
     public static McSession OfflineSession(string name)

@@ -5,8 +5,11 @@ namespace TeamLauncher;
 
 public static class DataStore
 {
-    private static string Dir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TeamLauncher");
+    public static bool IsPortable { get; set; }
+
+    private static string Dir => IsPortable
+        ? Path.Combine(AppContext.BaseDirectory, "data")
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TeamLauncher");
 
     private static string FilePath => Path.Combine(Dir, "config.json");
 
@@ -82,7 +85,7 @@ public static class DataStore
                 Defaults[key] = value;
             }
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TL] Default config load failed: {ex.Message}"); }
     }
 
     /// <summary>Applique les defaults embarqués sur les champs vides de Settings.</summary>

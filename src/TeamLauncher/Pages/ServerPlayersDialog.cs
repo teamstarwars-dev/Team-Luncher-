@@ -226,7 +226,7 @@ public class ServerPlayersDialog : Form
         }
         if (st.Players.Length == 0)
             onlineList.Items.Add(st.Online > 0
-                ? Lang.T($"({st.Online} joueur(s), liste non exposée par le serveur)", $"({st.Online} player(s), list not exposed by the server)")
+                ? string.Format(Lang.T("({0} joueur(s), liste non exposée par le serveur)", "({0} player(s), list not exposed by the server)"), st.Online)
                 : Lang.T("(aucun joueur connecté)", "(no players connected)"));
         else
             foreach (var p in st.Players) onlineList.Items.Add(p);

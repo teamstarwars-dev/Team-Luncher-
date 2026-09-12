@@ -9,6 +9,7 @@ public class InstancesPage : UserControl, IRefreshable
     private TextBox filterBox = new();
     private Label emptyLabel = new();
     private System.Windows.Forms.Timer? _filterDebounce;
+    private Panel _loadingPanel = null!;
 
     private static readonly Font CardNameFont = new("Segoe UI", 10f, FontStyle.Bold);
     private static readonly Font CardMetaFont = new("Segoe UI", 8f);
@@ -85,6 +86,22 @@ public class InstancesPage : UserControl, IRefreshable
         emptyLabel.Location = new Point(0, 176);
         emptyLabel.Visible = false;
 
+        _loadingPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Theme.Bg
+        };
+        var loadingLabel = new Label
+        {
+            Text = "⏳ Chargement...",
+            ForeColor = Theme.TextDim,
+            Font = new Font("Segoe UI", 12f),
+            AutoSize = true,
+            Dock = DockStyle.None
+        };
+        _loadingPanel.Controls.Add(loadingLabel);
+        _loadingPanel.Visible = false;
+
         cardsFlow.AutoSize = true;
         cardsFlow.FlowDirection = FlowDirection.LeftToRight;
         cardsFlow.WrapContents = true;
@@ -97,6 +114,7 @@ public class InstancesPage : UserControl, IRefreshable
         root.Controls.Add(filterBox);
         root.Controls.Add(cardsFlow);
         root.Controls.Add(emptyLabel);
+        root.Controls.Add(_loadingPanel);
 
         Controls.Add(root);
     }
@@ -911,6 +929,19 @@ public class InstancesPage : UserControl, IRefreshable
     public void RefreshData()
     {
         string filter = filterBox.Text.Trim();
+
+        _loadingPanel.Visible = true;
+        cardsFlow.Visible = false;
+        emptyLabel.Visible = false;
+        var loadingLbl = _loadingPanel.Controls[0] as Label;
+        if (loadingLbl != null)
+        {
+            loadingLbl.Location = new Point(
+                (_loadingPanel.Width - loadingLbl.PreferredWidth) / 2,
+                (_loadingPanel.Height - loadingLbl.PreferredHeight) / 2);
+        }
+        Application.DoEvents();
+
         cardsFlow.SuspendLayout();
         cardsFlow.Controls.Clear();
 
@@ -935,6 +966,7 @@ public class InstancesPage : UserControl, IRefreshable
         }
 
         cardsFlow.ResumeLayout();
+        _loadingPanel.Visible = false;
     }
 
     private Panel MakeCard(InstanceInfo inst)
@@ -1127,6 +1159,52 @@ public class InstancesPage : UserControl, IRefreshable
         nameLabel.Click += (_, _) => OpenDetail();
         metaLabel.Click += (_, _) => OpenDetail();
         countsLabel.Click += (_, _) => OpenDetail();
+
+        // ---- Menu contextuel (clic droit) ----
+        var ctx = new ContextMenuStrip
+        {
+            BackColor = Theme.Panel,
+            ForeColor = Theme.Text,
+            ShowImageMargin = false,
+            Font = new Font("Segoe UI", 9.5f)
+        };
+        ctx.Items.Add("Jouer", null, (_, _) => GameLauncher.Play(inst));
+        ctx.Items.Add("Modifier", null, (_, _) =>
+        {
+            using var dlg = new InstanceEditDialog(inst);
+            if (dlg.ShowDialog(FindForm()) == DialogResult.OK) RefreshData();
+        });
+        ctx.Items.Add("Ouvrir le dossier", null, (_, _) =>
+        {
+            string dir = Path.Combine(DataStore.InstancesRoot, inst.Id);
+            if (Directory.Exists(dir))
+                Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true });
+        });
+        ctx.Items.Add("Exporter en .zip", null, (_, _) =>
+        {
+            using var save = new SaveFileDialog
+            {
+                FileName = inst.Name + ".zip",
+                Filter = "Archive zip|*.zip"
+            };
+            if (save.ShowDialog(FindForm()) != DialogResult.OK) return;
+            try
+            {
+                PackService.Export(inst, save.FileName);
+                MessageBox.Show("Modpack exporté :\n" + save.FileName, "Team Launcher");
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "Team Launcher"); }
+        });
+        ctx.Items.Add(new ToolStripSeparator());
+        ctx.Items.Add("Supprimer", null, (_, _) => DeleteInstance(inst));
+        foreach (ToolStripItem item in ctx.Items)
+        {
+            item.ForeColor = Theme.Text;
+            if (item is ToolStripSeparator sep) sep.BackColor = Theme.Border;
+        }
+        ctx.Opening += (_, _) => { foreach (ToolStripItem i in ctx.Items) i.BackColor = Theme.Panel; };
+
+        card.ContextMenuStrip = ctx;
 
         return card;
     }

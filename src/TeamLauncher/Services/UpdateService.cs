@@ -80,10 +80,11 @@ public static class UpdateService
         if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
             throw new Exception("Impossible de trouver l'exe en cours.");
 
-        string tempExe = exePath + ".update";
-        string batPath = exePath + ".update.bat";
+        string dir = Path.GetDirectoryName(exePath) ?? "";
+        string tempNew = Path.Combine(dir, "TeamLauncher.new.exe");
+        string batPath = Path.Combine(dir, "TeamLauncher.update.bat");
+        string oldExe = exePath + ".old";
 
-        // Créer une ProgressBar dans le titre du formulaire
         void SetProgress(string msg)
         {
             try { owner.BeginInvoke(() => owner.Text = $"Team Launcher — {msg}"); } catch { }
@@ -97,7 +98,7 @@ public static class UpdateService
             resp.EnsureSuccessStatusCode();
 
             long total = resp.Content.Headers.ContentLength ?? -1;
-            await using var fs = File.Create(tempExe);
+            await using var fs = File.Create(tempNew);
             await using var src = await resp.Content.ReadAsStreamAsync();
 
             var buffer = new byte[81920];
@@ -117,18 +118,25 @@ public static class UpdateService
 
             SetProgress("Installation…");
 
-            // Script batch : attendre que l'exe se ferme, remplacer, relancer
-            string batContent = $@"
-@echo off
-timeout /t 2 /nobreak >nul
-del ""{exePath}"" 2>nul
-move /y ""{tempExe}"" ""{exePath}"" >nul 2>&1
+            // Script batch :
+            // 1. Attendre 3 secondes que le processus se ferme
+            // 2. Renommer l'ancien exe (renommer marche sur un exe en cours d'execution)
+            // 3. Renommer le nouveau exe à la place
+            // 4. Relancer
+            // 5. Supprimer l'ancien
+            string batContent = $@"@echo off
+title Team Launcher — Mise a jour
+echo Mise a jour en cours...
+timeout /t 3 /nobreak >nul
+ren ""{exePath}"" ""TeamLauncher.old.exe"" 2>nul
+ren ""{tempNew}"" ""TeamLauncher.exe""
 start """" ""{exePath}""
+timeout /t 2 /nobreak >nul
+del ""{oldExe}"" 2>nul
 del ""%~f0""
 ";
             File.WriteAllText(batPath, batContent);
 
-            // Lancer le batch puis quitter
             Process.Start(new ProcessStartInfo
             {
                 FileName = batPath,
@@ -140,7 +148,7 @@ del ""%~f0""
         }
         catch
         {
-            if (File.Exists(tempExe)) { try { File.Delete(tempExe); } catch { } }
+            if (File.Exists(tempNew)) { try { File.Delete(tempNew); } catch { } }
             if (File.Exists(batPath)) { try { File.Delete(batPath); } catch { } }
             throw;
         }

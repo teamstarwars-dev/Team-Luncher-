@@ -124,15 +124,19 @@ public static class UpdateService
             // 3. Renommer le nouveau exe à la place
             // 4. Relancer
             // 5. Supprimer l'ancien
+            // Script batch : boucle jusqu'à ce que le renommage fonctionne
             string batContent = $@"@echo off
 title Team Launcher — Mise a jour
 echo Mise a jour en cours...
-timeout /t 3 /nobreak >nul
-ren ""{exePath}"" ""TeamLauncher.old.exe"" 2>nul
-ren ""{tempNew}"" ""TeamLauncher.exe""
+cd /d ""{dir}""
+:retry
+timeout /t 1 /nobreak >nul
+ren ""TeamLauncher.exe"" ""TeamLauncher.old.exe"" 2>nul
+if errorlevel 1 goto retry
+ren ""TeamLauncher.new.exe"" ""TeamLauncher.exe""
 start """" ""{exePath}""
 timeout /t 2 /nobreak >nul
-del ""{oldExe}"" 2>nul
+del ""TeamLauncher.old.exe"" 2>nul
 del ""%~f0""
 ";
             File.WriteAllText(batPath, batContent);

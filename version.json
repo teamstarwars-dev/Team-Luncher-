@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0.2",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.2/TeamLauncher.exe",
-  "changelog": "v3.6.0.2 — Fix update auto (rename au lieu de copy)"
+  "version": "3.6.0.3",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.3/TeamLauncher.exe",
+  "changelog": "v3.6.0.3 — Fix update batch (cd + retry loop)"
 }

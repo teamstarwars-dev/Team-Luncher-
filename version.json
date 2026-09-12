@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0.3",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.3/TeamLauncher.exe",
-  "changelog": "v3.6.0.3 — Fix update batch (cd + retry loop)"
+  "version": "3.6.0.4",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0.4/TeamLauncher.exe",
+  "changelog": "v3.6.0.4 — Fix boucle infinie de mise à jour"
 }

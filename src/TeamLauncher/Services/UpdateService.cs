@@ -8,12 +8,15 @@ public static class UpdateService
     private const string DefaultVersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/master/version.json";
 
     public static string CurrentVersion =>
-        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(4) ?? "1.0.0.0";
 
     public static async Task CheckOnStartupAsync()
     {
         try
         {
+            // Supprimer l'ancien exe (.old) au démarrage s'il traîne
+            CleanupOldExe();
+
             var info = await CheckAsync();
             if (info == null) return;
 
@@ -44,6 +47,18 @@ public static class UpdateService
                     });
                 }
             }
+        }
+        catch { }
+    }
+
+    private static void CleanupOldExe()
+    {
+        try
+        {
+            string exePath = Environment.ProcessPath ?? "";
+            if (string.IsNullOrEmpty(exePath)) return;
+            string old = exePath + ".old";
+            if (File.Exists(old)) File.Delete(old);
         }
         catch { }
     }
@@ -82,7 +97,6 @@ public static class UpdateService
 
         string dir = Path.GetDirectoryName(exePath) ?? "";
         string tempNew = Path.Combine(dir, "TeamLauncher.new.exe");
-        string batPath = Path.Combine(dir, "TeamLauncher.update.bat");
         string oldExe = exePath + ".old";
 
         void SetProgress(string msg)
@@ -118,42 +132,28 @@ public static class UpdateService
 
             SetProgress("Installation…");
 
-            // Script batch :
-            // 1. Attendre 3 secondes que le processus se ferme
-            // 2. Renommer l'ancien exe (renommer marche sur un exe en cours d'execution)
-            // 3. Renommer le nouveau exe à la place
-            // 4. Relancer
-            // 5. Supprimer l'ancien
-            // Script batch : boucle jusqu'à ce que le renommage fonctionne
-            string batContent = $@"@echo off
-title Team Launcher — Mise a jour
-echo Mise a jour en cours...
-cd /d ""{dir}""
-:retry
-timeout /t 1 /nobreak >nul
-ren ""TeamLauncher.exe"" ""TeamLauncher.old.exe"" 2>nul
-if errorlevel 1 goto retry
-ren ""TeamLauncher.new.exe"" ""TeamLauncher.exe""
-start """" ""{exePath}""
-timeout /t 2 /nobreak >nul
-del ""TeamLauncher.old.exe"" 2>nul
-del ""%~f0""
-";
-            File.WriteAllText(batPath, batContent);
+            // Étape 1 : Renommer l'ancien exe (autorisé même en cours d'exécution sur Windows)
+            if (File.Exists(oldExe)) File.Delete(oldExe);
+            File.Move(exePath, oldExe);
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = batPath,
-                UseShellExecute = true,
-                CreateNoWindow = true
-            });
+            // Étape 2 : Renommer le nouveau exe à la place
+            File.Move(tempNew, exePath);
 
+            // Étape 3 : Relancer le nouveau
+            SetProgress("Relance…");
+            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+
+            // Étape 4 : Quitter
             Environment.Exit(0);
         }
         catch
         {
+            // Rollback
             if (File.Exists(tempNew)) { try { File.Delete(tempNew); } catch { } }
-            if (File.Exists(batPath)) { try { File.Delete(batPath); } catch { } }
+            if (File.Exists(oldExe) && !File.Exists(exePath))
+            {
+                try { File.Move(oldExe, exePath); } catch { }
+            }
             throw;
         }
     }

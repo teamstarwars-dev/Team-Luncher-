@@ -1,16 +1,12 @@
-## Deux versions disponibles
+## Fix critique
+- Version self-contained ne plu plus avec "Runtime manquant"
+- Detection .NET ignoree si coreclr.dll est present dans le dossier
 
-### Version légère (0.2 Mo) — pour les PC avec .NET 8 déjà installé
-Telecharge TeamLauncher.exe directement.
+## Deux versions
 
-### Version complète (67 Mo zippé) — pour tous les PC
-Telecharge le zip, decompresse-le, et lance TeamLauncher.exe.
-Plus besoin d'installer quoi que ce soit, tout est dedans.
+### Version legere (0.2 Mo)
+Pour les PC avec .NET 8 Desktop Runtime deja installe.
 
-## Performance
-- SkinPreview : LockBits au lieu de GetPixel
-- InstancesPage : images redimensionnees + debounce filtre
-- ModelViewer3D : Array.Sort au lieu de LINQ
-- ServerPanel : cache PID Java
-- Theme.Round : skip si taille identique
-- GameLauncher : barre de progression optimisee
+### Version complete (67 Mo zip) — POUR ELLE
+Telecharge le zip, decompresse TOUT dans un dossier, et lance TeamLauncher.exe.
+Ne supprime RIEN du dossier.

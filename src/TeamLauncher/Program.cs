@@ -151,9 +151,14 @@ internal static class Program
     {
         try
         {
+            // En mode self-contained, le runtime est dans le même dossier que l'exe
+            string? exeDir = Path.GetDirectoryName(Environment.ProcessPath);
+            if (!string.IsNullOrEmpty(exeDir) && File.Exists(Path.Combine(exeDir, "coreclr.dll")))
+                return true;
+
             string? version = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
             return !string.IsNullOrEmpty(version) && version.Contains("8.");
         }
-        catch { return false; }
+        catch { return true; }
     }
 }

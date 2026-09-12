@@ -31,7 +31,8 @@ public static class DataStore
 
         try
         {
-            if (File.Exists(FilePath))
+            bool configExisted = File.Exists(FilePath);
+            if (configExisted)
             {
                 var loaded = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath));
                 if (loaded != null)
@@ -41,11 +42,12 @@ public static class DataStore
                         Settings.InstancesDir = Path.Combine(Dir, "instances");
                 }
             }
+
+            // Appliquer les valeurs par défaut embarquées
+            // Si le config existait déjà, ne pas écraser les booléens (l'utilisateur a choisi)
+            ApplyDefaults(applyBooleans: !configExisted);
         }
         catch { /* config corrompue : on garde les valeurs par défaut */ }
-
-        // Appliquer les valeurs par défaut embarquées si le champ est vide
-        ApplyDefaults();
 
         Directory.CreateDirectory(Settings.InstancesDir);
         Directory.CreateDirectory(SkinsDir);
@@ -84,16 +86,19 @@ public static class DataStore
     }
 
     /// <summary>Applique les defaults embarqués sur les champs vides de Settings.</summary>
-    private static void ApplyDefaults()
+    private static void ApplyDefaults(bool applyBooleans = true)
     {
         if (string.IsNullOrEmpty(Settings.DiscordAppId) && Defaults.TryGetValue("DISCORD_APP_ID", out var appId))
             Settings.DiscordAppId = appId;
 
-        if (!Settings.DiscordEnabled && Defaults.TryGetValue("DISCORD_ENABLED", out var discEnabled))
-            Settings.DiscordEnabled = discEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
+        if (applyBooleans)
+        {
+            if (!Settings.DiscordEnabled && Defaults.TryGetValue("DISCORD_ENABLED", out var discEnabled))
+                Settings.DiscordEnabled = discEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-        if (!Settings.TelemetryEnabled && Defaults.TryGetValue("TELEMETRY_ENABLED", out var telEnabled))
-            Settings.TelemetryEnabled = telEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
+            if (!Settings.TelemetryEnabled && Defaults.TryGetValue("TELEMETRY_ENABLED", out var telEnabled))
+                Settings.TelemetryEnabled = telEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
+        }
 
         if (string.IsNullOrEmpty(Settings.DiscordTelemetryWebhook) && Defaults.TryGetValue("DISCORD_TELEMETRY_WEBHOOK", out var webhook))
             Settings.DiscordTelemetryWebhook = webhook;

@@ -745,7 +745,7 @@ public static class ServerHost
     }
 
     /// <summary>Adresses publiques détectées dans la sortie de l'agent : serverId -> hôte .playit.gg</summary>
-    public static readonly Dictionary<string, string> TunnelAddresses = new();
+    public static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> TunnelAddresses = new();
 
     /// <summary>Une adresse publique a été détectée pour ce serveur : (serverId, adresse).</summary>
     public static event Action<string, string>? TunnelAddressFound;

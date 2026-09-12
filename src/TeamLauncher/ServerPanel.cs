@@ -392,20 +392,6 @@ public class ServerPanel : UserControl
                 return;
             }
             playerList.Items.Add(Lang.T("Chargement…", "Loading…"));
-            await Task.Run(() =>
-            {
-                try
-                {
-                    var psi = new ProcessStartInfo("java", $"-jar server.jar list")
-                    {
-                        WorkingDirectory = ServerHost.Dir(_server),
-                        RedirectStandardOutput = true, UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-                }
-                catch { }
-            });
-            // Utiliser la commande list via la console
             ServerHost.SendCommand(_server.Id, "list");
             playerList.Items.Clear();
             playerList.Items.Add(Lang.T("Rafraîchis la console pour voir les joueurs.", "Refresh the console to see players."));

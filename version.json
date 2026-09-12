@@ -1,5 +1,5 @@
 {
-  "version": "3.5.9",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.5.9/TeamLauncher.exe",
-  "changelog": "v3.5.9 — Optimisations performances pour PC faibles"
+  "version": "3.6.0",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v3.6.0/TeamLauncher.exe",
+  "changelog": "v3.6.0 — Correction Discord, VPS cache, optimisations"
 }

@@ -29,7 +29,8 @@ public static class Theme
     public static Color Text { get; private set; } = FromHex("#e6e8eb");
     public static Color TextDim { get; private set; } = FromHex("#8b919a");
 
-    public static Font Title => new("Segoe UI", 13f, FontStyle.Regular);
+    private static readonly Font _titleFont = new("Segoe UI", 13f, FontStyle.Regular);
+    public static Font Title => _titleFont;
 
     static Theme() => Reload();
 

@@ -59,7 +59,12 @@ public class InstancesPage : UserControl, IRefreshable
         var moreBtn = new Button { Text = Lang.T("Plus d'actions  ▾", "More actions  ▾"), Width = 150, Height = 32, Margin = new Padding(8, 0, 0, 0) };
         Theme.Apply(moreBtn);
         moreBtn.Location = new Point(178, 76);
-        moreBtn.Click += (_, _) => BuildActionsMenu(moreBtn).Show(moreBtn, new Point(0, moreBtn.Height));
+        moreBtn.Click += (_, _) =>
+        {
+            var menu = BuildActionsMenu(moreBtn);
+            menu.Closed += (_, _) => menu.Dispose();
+            menu.Show(moreBtn, new Point(0, moreBtn.Height));
+        };
 
         filterBox = new TextBox
         {
@@ -297,9 +302,12 @@ public class InstancesPage : UserControl, IRefreshable
             }
             finally
             {
-                dlBtn.Enabled = true;
-                dlBtn.Text = Lang.T("Installer", "Install");
-                urlBox.Enabled = true;
+                if (!input.IsDisposed)
+                {
+                    dlBtn.Enabled = true;
+                    dlBtn.Text = Lang.T("Installer", "Install");
+                    urlBox.Enabled = true;
+                }
             }
         };
 

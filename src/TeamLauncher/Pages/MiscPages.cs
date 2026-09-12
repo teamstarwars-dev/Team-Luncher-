@@ -491,7 +491,8 @@ public class SettingsPage : UserControl, IRefreshable
             Notifier.Show("CurseForge", "Clé API enregistrée.");
         };
 
-        // ---- VPS / Pterodactyl ----
+        // ---- VPS / Pterodactyl (désactivé pour les utilisateurs) ----
+        /*
         integrationItems.Add(SectionHeader("VPS / PTERODACTYL"));
 
         var vpsUrlBox = new TextBox { Width = 420 };
@@ -538,6 +539,7 @@ public class SettingsPage : UserControl, IRefreshable
                 vpsStatus.Text = "✕ " + ex.Message.Split('\n')[0];
             }
         };
+        */
 
         // ---- Télémétrie / Logs distants ----
         integrationItems.Add(SectionHeader("TÉLÉMÉTRIE & LOGS DISTANTS"));

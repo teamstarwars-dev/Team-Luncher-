@@ -178,6 +178,7 @@ public static class GameLauncher
             }
         });
         progressForm.ShowDialog();
+        progressForm.Dispose();
     }
 
     /// <summary>Télécharge et installe automatiquement un JRE Adoptium si la version requise manque.</summary>
@@ -605,7 +606,7 @@ public static class GameLauncher
     }
 
     /// <summary>Détecte la version majeure de Java en interrogeant l'exécutable (avec cache).</summary>
-    private static readonly Dictionary<string, int> JavaMajorCache = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> JavaMajorCache = new();
 
     private static int DetectJavaMajor(string javawPath)
     {

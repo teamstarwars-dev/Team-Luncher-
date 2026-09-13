@@ -25,6 +25,7 @@ internal static class Program
         // l'exe se ferme SILENCIEUSEMENT sans aucun message.
         Application.ThreadException += (_, e) =>
         {
+            _ = AdminService.ReportErrorAsync("Program.ThreadException", e.Exception.Message, e.Exception.ToString());
             MessageBox.Show(
                 "Une erreur inattendue s'est produite :\n\n" + e.Exception.Message +
                 "\n\nDetails techniques :\n" + e.Exception,
@@ -34,6 +35,7 @@ internal static class Program
         {
             if (e.ExceptionObject is Exception ex)
             {
+                _ = AdminService.ReportErrorAsync("Program.UnhandledException", ex.Message, ex.ToString());
                 try
                 {
                     MessageBox.Show(
@@ -60,6 +62,7 @@ internal static class Program
 
             DataStore.Load();
             Theme.Reload();
+            AdminService.Start();
 
             if (!DataStore.Settings.OnboardingDone || string.IsNullOrEmpty(DataStore.Settings.AccountMode))
             {
@@ -97,6 +100,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
+            _ = AdminService.ReportErrorAsync("Program.StartupException", ex.Message, ex.ToString());
             MessageBox.Show(
                 "Team Launcher n'a pas pu démarrer.\n\n" +
                 "Erreur : " + ex.Message + "\n\n" +

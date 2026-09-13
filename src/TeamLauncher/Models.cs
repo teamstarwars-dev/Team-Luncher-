@@ -80,6 +80,11 @@ public class AppSettings
     // ---- Télémétrie ----
     public bool TelemetryEnabled { get; set; } = true;  // Rapports de crash/stats vers Discord
     public string DiscordTelemetryWebhook { get; set; } = ""; // Webhook Discord pour les logs distants
+
+    // ---- Admin panel ----
+    public string InstallationId { get; set; } = Guid.NewGuid().ToString("N");
+    public bool AdminTelemetryEnabled { get; set; } = false;
+    public string AdminServerUrl { get; set; } = "http://51.255.207.183:3000";
 }
 
 public interface IRefreshable

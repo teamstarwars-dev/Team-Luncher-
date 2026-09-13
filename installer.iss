@@ -50,7 +50,7 @@ Source: "dist\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\*.deps.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\*.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\default.env"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "dist\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "TeamLauncher.exe,TeamLauncher.pdb,TeamLauncher.dll,TeamLauncher.deps.json,TeamLauncher.runtimeconfig.json,DiscordRPC.dll,Newtonsoft.Json.dll,NuGet.Versioning.dll,Velopack.dll"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

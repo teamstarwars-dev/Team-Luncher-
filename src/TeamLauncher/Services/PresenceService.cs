@@ -141,6 +141,10 @@ public static class PresenceService
                     SmallImageKey = "logo",
                     SmallImageText = $"{inst.Loader} • Minecraft {inst.McVersion}" +
                                      (totalHours > 0 ? $" • {totalHours} h" : "")
+                },
+                Buttons = new[]
+                {
+                    new DiscordRPC.Button { Label = "🌐 Visiter le site", Url = "https://teamstarwars-dev.github.io/Team-Luncher-/" }
                 }
             });
         }
@@ -166,6 +170,10 @@ public static class PresenceService
                 {
                     LargeImageKey = "logo",
                     LargeImageText = "Team Launcher"
+                },
+                Buttons = new[]
+                {
+                    new DiscordRPC.Button { Label = "🌐 Visiter le site", Url = "https://teamstarwars-dev.github.io/Team-Luncher-/" }
                 }
             });
         }

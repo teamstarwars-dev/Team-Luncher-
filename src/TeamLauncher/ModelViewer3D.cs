@@ -11,6 +11,8 @@ public class ModelViewer3D : Control
 {
     private static readonly Font EmptyFont = new("Segoe UI", 10f);
     private static readonly Font InfoFont = new("Consolas", 9f);
+    private readonly Dictionary<Color, SolidBrush> _brushCache = new();
+    private readonly Dictionary<Color, Pen> _penCache = new();
 
     private readonly List<ModelElement> _elements = new();
     private float _angleX = 0.3f;
@@ -276,9 +278,9 @@ public class ModelViewer3D : Control
         Array.Sort(sorted, (a, b) => b.Depth.CompareTo(a.Depth));
         foreach (var f in sorted)
         {
-            using var brush = new SolidBrush(f.Color);
+            using var brush = GetBrush(f.Color);
             g.FillPolygon(brush, f.Points);
-            using var pen = new Pen(ControlPaint.Dark(f.Color, 0.15f), 0.5f);
+            using var pen = GetPen(ControlPaint.Dark(f.Color, 0.15f), 0.5f);
             g.DrawPolygon(pen, f.Points);
         }
 
@@ -329,5 +331,25 @@ public class ModelViewer3D : Control
         base.OnMouseWheel(e);
         _zoom = Math.Clamp(_zoom + e.Delta * 0.02f, 1f, 50f);
         Invalidate();
+    }
+
+    private SolidBrush GetBrush(Color color)
+    {
+        if (!_brushCache.TryGetValue(color, out var brush))
+        {
+            brush = new SolidBrush(color);
+            _brushCache[color] = brush;
+        }
+        return brush;
+    }
+
+    private Pen GetPen(Color color, float width = 1f)
+    {
+        if (!_penCache.TryGetValue(color, out var pen))
+        {
+            pen = new Pen(color, width);
+            _penCache[color] = pen;
+        }
+        return pen;
     }
 }

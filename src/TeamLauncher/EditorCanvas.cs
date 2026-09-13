@@ -12,6 +12,8 @@ public class EditorCanvas : Control
     private static readonly Font EmptyFont = new("Segoe UI", 10f);
     private static readonly Font InfoFont = new("Consolas", 9f);
     private static readonly Font MarkerFont = new("Segoe UI", 8f, FontStyle.Bold);
+    private readonly Dictionary<Color, SolidBrush> _brushCache = new();
+    private readonly Dictionary<Color, Pen> _penCache = new();
 
     private readonly Dictionary<(int Rx, int Rz), byte[]> _tables = new();
     private readonly List<string> _paths = new();
@@ -133,7 +135,7 @@ public class EditorCanvas : Control
 
             float bx = _originX + (rx - _minRx) * 32 * _cell;
             float bz = _originY + (rz - _minRz) * 32 * _cell;
-            using (var pen = new Pen(ControlPaint.Dark(Theme.Bg, 0.15f)))
+            using (var pen = GetPen(ControlPaint.Dark(Theme.Bg, 0.15f)))
                 g.DrawRectangle(pen, bx, bz, 32 * _cell, 32 * _cell);
 
             for (int lz = 0; lz < 32; lz++)
@@ -145,7 +147,7 @@ public class EditorCanvas : Control
 
                 int cx = rx * 32 + lx, cz = rz * 32 + lz;
                 bool sel = _selected.Contains((cx, cz));
-                using var brush = new SolidBrush(sel ? Color.FromArgb(255, 150, 40) : Theme.Accent);
+                using var brush = GetBrush(sel ? Color.FromArgb(255, 150, 40) : Theme.Accent);
                 float px = _originX + (cx - _minRx * 32) * _cell;
                 float py = _originY + (cz - _minRz * 32) * _cell;
                 float sz = Math.Max(_cell - 0.5f, 1f);
@@ -162,10 +164,11 @@ public class EditorCanvas : Control
         {
             var a = ChunkToScreen(_dragStart);
             var bPt = ChunkToScreen(_dragEnd.Value);
-            using var pen = new Pen(Color.White, 1.5f) { DashStyle = DashStyle.Dash };
+            using var pen = GetPen(Color.White, 1.5f);
+            pen.DashStyle = DashStyle.Dash;
             var rect = RectFrom(a, bPt);
             g.DrawRectangle(pen, rect);
-            using var overlay = new SolidBrush(Color.FromArgb(60, Color.White));
+            using var overlay = GetBrush(Color.FromArgb(60, Color.White));
             g.FillRectangle(overlay, rect);
         }
 
@@ -183,7 +186,7 @@ public class EditorCanvas : Control
         float py = _originY + (cz - _minRz * 32) * _cell;
         float sz = Math.Max(_cell * 2, 10f);
 
-        using var brush = new SolidBrush(Color.FromArgb(120, color));
+        using var brush = GetBrush(Color.FromArgb(120, color));
         g.FillEllipse(brush, px - sz / 2, py - sz / 2, sz, sz);
         var ts = TextRenderer.MeasureText(label, MarkerFont);
         TextRenderer.DrawText(g, label, MarkerFont,
@@ -193,6 +196,26 @@ public class EditorCanvas : Control
     private static RectangleF RectFrom(PointF a, PointF b) =>
         RectangleF.FromLTRB(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y),
                             Math.Max(a.X, b.X), Math.Max(a.Y, b.Y));
+
+    private SolidBrush GetBrush(Color color)
+    {
+        if (!_brushCache.TryGetValue(color, out var brush))
+        {
+            brush = new SolidBrush(color);
+            _brushCache[color] = brush;
+        }
+        return brush;
+    }
+
+    private Pen GetPen(Color color, float width = 1f)
+    {
+        if (!_penCache.TryGetValue(color, out var pen))
+        {
+            pen = new Pen(color, width);
+            _penCache[color] = pen;
+        }
+        return pen;
+    }
 
     private PointF ChunkToScreen((int Cx, int Cz) c) =>
         new(_originX + (c.Cx - _minRx * 32) * _cell,

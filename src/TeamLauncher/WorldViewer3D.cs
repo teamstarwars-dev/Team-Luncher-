@@ -21,6 +21,7 @@ public class WorldViewer3D : Control
 
     private static readonly Font _placeholderFont = new("Segoe UI", 11f);
     private static readonly Font _infoFont = new("Consolas", 9f);
+    private readonly Dictionary<Color, SolidBrush> _brushCache = new();
 
     private static readonly Dictionary<string, Color> BlockColors = new()
     {
@@ -249,16 +250,16 @@ public class WorldViewer3D : Control
             var bottom = new PointF(px, py + sz * 0.4f);
             var right = new PointF(px + sz * 0.7f, py);
 
-            using var brush = new SolidBrush(shaded);
+            using var brush = GetCachedBrush(shaded);
             g.FillPolygon(brush, new[] { top, left, bottom, right });
 
             var rightDark = ControlPaint.Dark(shaded, 0.2f);
-            using var rightBrush = new SolidBrush(rightDark);
+            using var rightBrush = GetCachedBrush(rightDark);
             g.FillPolygon(rightBrush, new[] { left, bottom,
                 new PointF(px, py + sz * 0.8f), new PointF(px - sz * 0.7f, py + sz * 0.4f) });
 
             var leftDark = ControlPaint.Dark(shaded, 0.35f);
-            using var leftBrush = new SolidBrush(leftDark);
+            using var leftBrush = GetCachedBrush(leftDark);
             g.FillPolygon(leftBrush, new[] { bottom, right,
                 new PointF(px, py + sz * 0.8f), new PointF(px + sz * 0.7f, py + sz * 0.4f) });
         }
@@ -279,6 +280,16 @@ public class WorldViewer3D : Control
         return Color.FromArgb(255, Math.Clamp(r, 60, 220),
                                  Math.Clamp(gg, 60, 220),
                                  Math.Clamp(b, 60, 220));
+    }
+
+    private SolidBrush GetCachedBrush(Color color)
+    {
+        if (!_brushCache.TryGetValue(color, out var brush))
+        {
+            brush = new SolidBrush(color);
+            _brushCache[color] = brush;
+        }
+        return brush;
     }
 
     protected override void OnMouseDown(MouseEventArgs e)

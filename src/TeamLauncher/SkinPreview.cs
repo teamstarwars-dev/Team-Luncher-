@@ -19,6 +19,7 @@ public class SkinPreview : Control
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 100 };
     private readonly Pen _outlinePen;
     private readonly Font _infoFont;
+    private readonly Dictionary<Color, SolidBrush> _brushCache = new();
     private Color[]? _faceColors;
 
     private struct FaceData
@@ -252,7 +253,7 @@ public class SkinPreview : Control
             foreach (var f in arr)
             {
                 _outlinePen.Color = ControlPaint.Dark(f.Color, 0.2f);
-                using var brush = new SolidBrush(f.Color);
+                using var brush = GetBrush(f.Color);
                 g.FillPolygon(brush, f.Pts);
                 g.DrawPolygon(_outlinePen, f.Pts);
             }
@@ -305,7 +306,19 @@ public class SkinPreview : Control
             _skin?.Dispose();
             _outlinePen.Dispose();
             _infoFont.Dispose();
+            foreach (var b in _brushCache.Values) b.Dispose();
+            _brushCache.Clear();
         }
         base.Dispose(disposing);
+    }
+
+    private SolidBrush GetBrush(Color color)
+    {
+        if (!_brushCache.TryGetValue(color, out var brush))
+        {
+            brush = new SolidBrush(color);
+            _brushCache[color] = brush;
+        }
+        return brush;
     }
 }

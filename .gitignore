@@ -25,6 +25,7 @@ publish/*.dll
 publish/*.cor3.dll
 publish-sc/
 publish-test/
+installer-output/
 
 # FTP credentials
 ftp.env

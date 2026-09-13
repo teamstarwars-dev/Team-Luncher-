@@ -1,0 +1,33 @@
+LICENCE D'UTILISATION - Team Launcher
+======================================
+
+1. OBJET
+Ce logiciel ("Team Launcher") est fourni à titre gracieux par son développeur.
+
+2. UTILISATION
+Team Launcher est un logiciel gratuit réservé à un usage personnel et non commercial.
+Vous êtes libre de l'utiliser sur vos propres appareils.
+
+3. INTERDICTIONS
+Sans autorisation préalable écrite, il est interdit de :
+- Revendre, louer ou redistribuer ce logiciel
+- L'utiliser à des fins commerciales
+- Modifier ou décompiler le logiciel
+- Supprimer ou modifier les mentions de copyright
+
+4. PROPRIÉTÉ INTELLECTUELLE
+Ce logiciel et l'ensemble de ses composants (code source, graphismes, icônes)
+sont la propriété exclusive de leur auteur et sont protégés par les lois
+en vigueur sur la propriété intellectuelle.
+
+5. GARANTIE
+Ce logiciel est fourni "en l'état" sans garantie d'aucune sorte, expresse ou
+implicite. L'auteur ne saurait être tenu responsable des dommages directs
+ou indirects résultant de l'utilisation de ce logiciel.
+
+6. DURÉE
+La présente licence est applicable pour toutes les versions de Team Launcher
+jusqu'à révocation explicite par son auteur.
+
+Copyright (c) 2026 Team Launcher
+Tous droits réservés.

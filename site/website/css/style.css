@@ -132,6 +132,14 @@ h2 { font-size: 1.35rem; margin: 40px 0 16px; }
     margin-bottom: 10px;
 }
 
+.icon-svg {
+    width: 36px;
+    height: 36px;
+    color: var(--accent);
+    display: inline-block;
+    margin-bottom: 12px;
+}
+
 /* ---------- boutons ---------- */
 
 .btn {

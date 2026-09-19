@@ -2,7 +2,7 @@
 ; Requires Inno Setup 6.3+
 
 #define MyAppName "Team Launcher"
-#define MyAppVersion "4.1.0"
+#define MyAppVersion "4.2.0"
 #define MyAppPublisher "Team Launcher"
 #define MyAppURL "https://github.com/teamstarwars-dev/Team-Luncher-"
 #define MyAppExeName "TeamLauncher.exe"

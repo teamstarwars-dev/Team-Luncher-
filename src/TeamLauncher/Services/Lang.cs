@@ -345,4 +345,10 @@ public static class Lang
         }
         catch { }
     }
+
+    /// <summary>Événement émis quand la langue change (pour rafraîchir les pages sans redémarrer).</summary>
+    public static event Action? LanguageChanged;
+
+    /// <summary>Notifie que la langue a changé (appelé depuis les pages).</summary>
+    public static void NotifyLanguageChanged() => LanguageChanged?.Invoke();
 }

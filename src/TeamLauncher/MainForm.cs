@@ -433,9 +433,13 @@ public class MainForm : Form
 
         PresenceService.Init(); // Rich Presence Discord (si activée)
 
+        // Quand la langue change, recréer toutes les pages pour les traductions
+        Lang.LanguageChanged += OnLanguageChanged;
+
         FormClosed += (_, _) =>
         {
             trayIcon.Visible = false;
+            Lang.LanguageChanged -= OnLanguageChanged;
             GameLauncher.StateChanged -= OnGameStateChanged;
             PresenceService.Shutdown();
             DataStore.SaveNow();
@@ -626,6 +630,40 @@ public class MainForm : Form
         {
             RestoreFromTray();
         }
+    }
+
+    private void OnLanguageChanged()
+    {
+        if (InvokeRequired) { BeginInvoke(OnLanguageChanged); return; }
+
+        // Sauvegarder les paramètres
+        DataStore.Save();
+
+        // Vider le cache des pages pour les recréer avec la nouvelle langue
+        pages.Clear();
+
+        // Retrouver la page active actuelle
+        int activeIdx = navButtons.FindIndex(b => b.Tag is bool active && active);
+        if (activeIdx < 0) activeIdx = 0;
+
+        string key = navKeys[activeIdx];
+        var page = GetOrCreate(key, () => key switch
+        {
+            "home" => new HomePage(),
+            "news" => new NewsPage(),
+            "instances" => new InstancesPage(),
+            "explorer" => new ExplorerPage(),
+            "skins" => new SkinsPage(),
+            "explore" => new ExplorePage(),
+            "servers" => new ServersPage(),
+            "bedrock" => new BedrockPage(),
+            "edit" => new MapEditorPage(),
+            "moddev" => new ModDevPage(),
+            "model3d" => new ModelViewerPage(),
+            "account" => new AccountPage(),
+            _ => new SettingsPage()
+        });
+        Show(page, navButtons[activeIdx]);
     }
 
     private Control GetOrCreate(string key, Func<Control> create)

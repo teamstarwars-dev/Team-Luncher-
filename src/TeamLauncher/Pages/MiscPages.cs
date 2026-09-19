@@ -460,7 +460,7 @@ public class SettingsPage : UserControl, IRefreshable
 
             if (DataStore.Settings.Language != oldLang)
             {
-                Lang.RestartApp();
+                Lang.NotifyLanguageChanged();
                 return;
             }
 

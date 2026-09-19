@@ -1,38 +1,38 @@
 [
     {
-        "title":  "Test 6 - page suivante",
-        "date":  "2026-08-24",
-        "tag":  "TEST",
-        "text":  "Cette entree apparait sur la page 2 si la pagination marche !"
+        "title": "Bouton Discord sur la Rich Presence",
+        "date": "2026-09-19",
+        "tag": "NOUVEAU",
+        "text": "Un bouton 'Visiter le site' s'affiche maintenant sur ton profil Discord quand tu lances Minecraft. Correction du crash OpenAL audio."
     },
     {
-        "title":  "Test 5 - pagination",
-        "date":  "2026-08-24",
-        "tag":  "TEST",
-        "text":  "Entree de remplissage pour tester les pages."
+        "title": "Changement de langue sans redémarrage",
+        "date": "2026-09-19",
+        "tag": "FIX",
+        "text": "Changer la langue dans les paramètres ne ferme plus Minecraft. La page se rafraîchit instantanément."
     },
     {
-        "title":  "Test 4 - pagination",
-        "date":  "2026-08-24",
-        "tag":  "TEST",
-        "text":  "Entree de remplissage pour tester les pages."
+        "title": "Installateur Windows officiel",
+        "date": "2026-09-19",
+        "tag": "MAJ",
+        "text": "Team Launcher dispose maintenant d'un installateur Windows (Inno Setup) avec raccourci bureau et menu Démarrer."
     },
     {
-        "title":  "Test 3 - pagination",
-        "date":  "2026-08-24",
-        "tag":  "TEST",
-        "text":  "Entree de remplissage pour tester les pages."
+        "title": "Admin Panel & télémétrie",
+        "date": "2026-09-18",
+        "tag": "NOUVEAU",
+        "text": "Panel d'administration centralisé pour suivre les instances actives, les crashes et les statistiques d'utilisation."
     },
     {
-        "title":  "Test du flux d\u0027actualites",
-        "date":  "2026-08-24",
-        "tag":  "TEST",
-        "text":  "Si tu lis ce message dans l\u0027onglet Actualites du launcher, le script make-news.ps1 fonctionne parfaitement !"
+        "title": "Mises à jour automatiques",
+        "date": "2026-09-18",
+        "tag": "MAJ",
+        "text": "Le launcher vérifie les nouvelles versions au démarrage et propose la mise à jour en un clic."
     },
     {
-        "title":  "Onglets sur la page Serveurs",
-        "date":  "2026-08-24",
-        "tag":  "MAJ",
-        "text":  "Mes serveurs et favoris sont maintenant en onglets, avec console integree et progression du telechargement."
+        "title": "Portable mode",
+        "date": "2026-09-17",
+        "tag": "NOUVEAU",
+        "text": "Lance Team Launcher avec --portable pour garder toutes les données dans un seul dossier, idéal pour une clé USB."
     }
 ]

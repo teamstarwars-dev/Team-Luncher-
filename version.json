@@ -1,5 +1,5 @@
 {
-  "version": "4.1.0.0",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v4.1.0/TeamLauncher-update.zip",
-  "changelog": "v4.1.0 — Panel admin telemetry (http://51.255.207.183:3000)"
+  "version": "4.2.0.0",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v4.2.0/TeamLauncher-update.zip",
+  "changelog": "v4.2.0 — Bouton Discord 'Visiter le site' + correction crash OpenAL (audio)"
 }

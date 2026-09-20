@@ -2,7 +2,7 @@
 ; Requires Inno Setup 6.3+
 
 #define MyAppName "Team Launcher"
-#define MyAppVersion "4.2.1"
+#define MyAppVersion "4.2.2"
 #define MyAppPublisher "Team Launcher"
 #define MyAppURL "https://github.com/teamstarwars-dev/Team-Luncher-"
 #define MyAppExeName "TeamLauncher.exe"
@@ -50,7 +50,6 @@ Source: "dist\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\*.deps.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\*.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\default.env"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "dist\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "TeamLauncher.exe,TeamLauncher.pdb,TeamLauncher.dll,TeamLauncher.deps.json,TeamLauncher.runtimeconfig.json,DiscordRPC.dll,Newtonsoft.Json.dll,NuGet.Versioning.dll,Velopack.dll"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -77,6 +76,19 @@ begin
   Exec('taskkill', '/f /im TeamLauncher.exe', '', 0, ewWaitUntilTerminated, ResultCode);
   // Wait a moment for process to fully close
   Sleep(1000);
+end;
+
+// Check .NET 8 Desktop Runtime is installed
+function IsDotNet8Installed: Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec('cmd', '/c dotnet --list-runtimes | findstr "Microsoft.WindowsDesktop.App 8."', '', 0, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+end;
+
+function InitializeUpgrade: Boolean;
+begin
+  Result := True;
 end;
 
 // Clean up old portable data if user wants to migrate

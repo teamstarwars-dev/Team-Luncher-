@@ -411,7 +411,7 @@ public class SettingsPage : UserControl, IRefreshable
 
                 var result = $"Nouvelle version disponible : v{info.Value.Version}\n\n" +
                              $"Tu es en v{UpdateService.CurrentVersion}\n\n" +
-                             $"Changelog :\n{info.Value.Changelog}";
+                             $"Changelog :\n{info.Value.Notes}";
 
                 var dlg = MessageBox.Show(result + "\n\nMettre à jour maintenant ?",
                     "Team Launcher — Mises à jour", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
@@ -420,7 +420,7 @@ public class SettingsPage : UserControl, IRefreshable
                 {
                     try
                     {
-                        await UpdateService.UpdateAsync(info.Value.Url, FindForm()!);
+                        await UpdateService.UpdateAsync(FindForm()!);
                     }
                     catch (Exception ex)
                     {

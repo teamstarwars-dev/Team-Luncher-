@@ -1,5 +1,5 @@
 {
-  "version": "4.2.1.0",
-  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v4.2.1/TeamLauncher-update.zip",
-  "changelog": "v4.2.1 — Correction : changement de langue sans redémarrage ni fermeture de Minecraft"
+  "version": "4.2.2.0",
+  "url": "https://github.com/teamstarwars-dev/Team-Luncher-/releases/download/v4.2.2/TeamLauncher-update.zip",
+  "changelog": "v4.2.2 — Framework-dependent (20 Mo RAM au lieu de 47), auto-update Velopack, mémoire auto-ajustée"
 }

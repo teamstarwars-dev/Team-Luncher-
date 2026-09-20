@@ -298,6 +298,18 @@ public static class GameLauncher
         return -1;
     }
 
+    private static long GetTotalRamMb()
+    {
+        try
+        {
+            var mem = new MEMORYSTATUSEX { dwLength = System.Runtime.InteropServices.Marshal.SizeOf<MEMORYSTATUSEX>() };
+            if (GlobalMemoryStatusEx(ref mem))
+                return (long)(mem.ullTotalPhys / (1024 * 1024));
+        }
+        catch { }
+        return -1;
+    }
+
     /// <summary>Ajoute une ligne au journal depuis les autres services.</summary>
     public static void AppendLog(string text) => Log(text);
 
@@ -382,11 +394,16 @@ public static class GameLauncher
         // ---- 4bis. Vérification mémoire disponible ----
         int ramWanted = Math.Clamp(inst.MaxRamGb > 0 ? inst.MaxRamGb : DataStore.Settings.MaxRamGb, 1, 32);
         long availMb = GetAvailableRamMb();
-        Log($"Mémoire système : {availMb} Mo disponibles, {ramWanted} Go demandés.");
-        if (availMb < ramWanted * 1024L * 0.5)
+        long totalMemMb = GetTotalRamMb();
+        long headroomMb = availMb - ramWanted * 1024L;
+        Log($"Mémoire système : {availMb} Mo disponibles / {totalMemMb} Mo totales, {ramWanted} Go demandés (marge: {headroomMb} Mo).");
+
+        // Avertissement uniquement si vraiment critique (< 500 Mo dispo après allocation)
+        // Ne PAS réduire la RAM : Windows gère la pagination automatiquement
+        if (headroomMb < 500 && headroomMb >= 0)
         {
-            Log($"⚠ Mémoire insuffisante ! {availMb}Mo dispo < {ramWanted * 1024}Mo requis.");
-            ui.Status($"Mémoire faible ({availMb}Mo) — risque de crash...");
+            Log($"⚠ Mémoire très serrée ! Seulement {headroomMb}Mo de marge après allocation.");
+            ui.Status($"Mémoire serrée ({availMb}Mo dispo) — ferme des programmes en arrière-plan.");
         }
 
         // ---- 4bis. Info mods (journal uniquement, plus de popup trompeur) ----
@@ -422,7 +439,7 @@ public static class GameLauncher
         }
 
         foreach (var a in BuildJvmArgs(classpath, natives, isForge, officialJvm,
-            inst.MaxRamGb > 0 ? inst.MaxRamGb : DataStore.Settings.MaxRamGb, inst.JvmArgs))
+            ramWanted, inst.JvmArgs))
             psi.ArgumentList.Add(a);
         psi.ArgumentList.Add(mainClass);
         foreach (var a in BuildGameArgs(version, session, assetsIndex: info.GetProperty("assetsIndex").GetString()!, legacyArgs: info.GetProperty("minecraftArguments").GetString(), hasModernArgs: info.GetProperty("hasArguments").GetBoolean(), joinServer))
@@ -509,6 +526,15 @@ public static class GameLauncher
             args.Add("-XX:MaxGCPauseMillis=200");
             args.Add("-XX:+UseStringDeduplication");
             args.Add("-Xss512k");
+
+            // Args adaptatifs pour systèmes à faible RAM
+            if (ramGb <= 4)
+            {
+                args.Add("-XX:ParallelGCThreads=2");
+                args.Add("-XX:ConcGCThreads=1");
+                args.Add("-XX:InitialHeapSize=256m");
+                args.Add("-XX:+UseCompressedOops");
+            }
         }
         if (isForge)
         {

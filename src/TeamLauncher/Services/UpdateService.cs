@@ -1,32 +1,38 @@
-using System.Diagnostics;
-using System.IO.Compression;
-using System.Text.Json;
+using Velopack;
 
 namespace TeamLauncher;
 
 public static class UpdateService
 {
-    private const string DefaultVersionUrl = "https://raw.githubusercontent.com/teamstarwars-dev/Team-Luncher-/master/version.json";
+    private static UpdateManager? _updateManager;
 
     public static string CurrentVersion =>
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(4) ?? "1.0.0.0";
+
+    private static UpdateManager GetUpdateManager()
+    {
+        return _updateManager ??= new UpdateManager(
+            "https://github.com/teamstarwars-dev/Team-Luncher-/releases"
+        );
+    }
 
     public static async Task CheckOnStartupAsync()
     {
         try
         {
-            CleanupOldExe();
-
-            var info = await CheckAsync();
+            var um = GetUpdateManager();
+            var info = await um.CheckForUpdatesAsync();
             if (info == null) return;
 
             var mainForm = Application.OpenForms.OfType<Form>().FirstOrDefault();
             if (mainForm == null) return;
 
+            string notes = info.TargetFullRelease.NotesMarkdown ?? "";
+
             var result = mainForm.Invoke(() => MessageBox.Show(mainForm,
-                $"Une mise à jour est disponible : v{info.Value.Version}\n\n" +
+                $"Une mise à jour est disponible : v{info.TargetFullRelease.Version}\n\n" +
                 $"Tu es en v{CurrentVersion}\n\n" +
-                $"Changelog :\n{info.Value.Changelog}\n\n" +
+                $"Changelog :\n{notes}\n\n" +
                 $"Mettre à jour maintenant ?",
                 "Team Launcher — Mise à jour",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Information));
@@ -35,7 +41,11 @@ public static class UpdateService
             {
                 try
                 {
-                    await UpdateAsync(info.Value.Url, mainForm);
+                    SetProgress(mainForm, "Téléchargement…");
+                    await um.DownloadUpdatesAsync(info);
+
+                    SetProgress(mainForm, "Installation…");
+                    um.ApplyUpdatesAndRestart(info.TargetFullRelease);
                 }
                 catch (Exception ex)
                 {
@@ -51,142 +61,46 @@ public static class UpdateService
         catch { }
     }
 
-    private static void CleanupOldExe()
+    public static async Task<(string Version, string Notes)?> CheckAsync()
     {
         try
         {
-            string exePath = Environment.ProcessPath ?? "";
-            if (string.IsNullOrEmpty(exePath)) return;
-            string dir = Path.GetDirectoryName(exePath) ?? "";
-            string oldExe = exePath + ".old";
-            string oldDll = Path.Combine(dir, "TeamLauncher.dll.old");
-            string tempZip = Path.Combine(dir, "update-temp.zip");
-            if (File.Exists(oldExe)) File.Delete(oldExe);
-            if (File.Exists(oldDll)) File.Delete(oldDll);
-            if (File.Exists(tempZip)) File.Delete(tempZip);
-        }
-        catch { }
-    }
+            var um = GetUpdateManager();
+            var info = await um.CheckForUpdatesAsync();
+            if (info == null) return null;
 
-    public static async Task<(string Version, string Url, string Changelog)?> CheckAsync()
-    {
-        try
-        {
-            string json = await Http.Shared.GetStringAsync(DefaultVersionUrl);
-            var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            string latestVersion = root.GetProperty("version").GetString() ?? "";
-            string downloadUrl = root.GetProperty("url").GetString() ?? "";
-            string changelog = root.TryGetProperty("changelog", out var cl) ? cl.GetString() ?? "" : "";
-
-            if (string.IsNullOrEmpty(latestVersion) || string.IsNullOrEmpty(downloadUrl))
-                return null;
-
-            if (Version.TryParse(latestVersion, out var latest) &&
-                Version.TryParse(CurrentVersion, out var current) &&
-                latest > current)
-            {
-                return (latestVersion, downloadUrl, changelog);
-            }
-            return null;
+            return (info.TargetFullRelease.Version.ToString(), info.TargetFullRelease.NotesMarkdown ?? "");
         }
         catch { return null; }
     }
 
-    public static async Task UpdateAsync(string downloadUrl, Form owner)
+    public static async Task UpdateAsync(Form owner)
     {
-        string exePath = Environment.ProcessPath ?? "";
-        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
-            throw new Exception("Impossible de trouver l'exe en cours.");
+        var um = GetUpdateManager();
+        var info = await um.CheckForUpdatesAsync();
+        if (info == null)
+            throw new Exception("Aucune mise à jour disponible.");
 
-        string dir = Path.GetDirectoryName(exePath) ?? "";
-        string tempZip = Path.Combine(dir, "update-temp.zip");
-        string oldExe = exePath + ".old";
-        string oldDll = Path.Combine(dir, "TeamLauncher.dll.old");
-        string dllPath = Path.Combine(dir, "TeamLauncher.dll");
+        SetProgress(owner, "Téléchargement…");
+        await um.DownloadUpdatesAsync(info);
 
-        void SetProgress(string msg)
-        {
-            try { owner.BeginInvoke(() => owner.Text = $"Team Launcher — {msg}"); } catch { }
-        }
-
-        try
-        {
-            SetProgress("Téléchargement… 0%");
-
-            using var resp = await Http.Shared.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
-            resp.EnsureSuccessStatusCode();
-
-            long total = resp.Content.Headers.ContentLength ?? -1;
-            await using var fs = File.Create(tempZip);
-            await using var src = await resp.Content.ReadAsStreamAsync();
-
-            var buffer = new byte[81920];
-            long read = 0;
-            int n;
-            while ((n = await src.ReadAsync(buffer)) > 0)
-            {
-                await fs.WriteAsync(buffer.AsMemory(0, n));
-                read += n;
-                if (total > 0)
-                {
-                    int pct = (int)(read * 100 / total);
-                    SetProgress($"Téléchargement… {pct}%");
-                }
-            }
-            fs.Close();
-
-            SetProgress("Installation…");
-
-            if (File.Exists(oldExe)) File.Delete(oldExe);
-            if (File.Exists(oldDll)) File.Delete(oldDll);
-            File.Move(exePath, oldExe);
-            if (File.Exists(dllPath)) File.Move(dllPath, oldDll);
-
-            using (var zip = ZipFile.OpenRead(tempZip))
-            {
-                foreach (var entry in zip.Entries)
-                {
-                    string dest = Path.Combine(dir, entry.Name);
-                    entry.ExtractToFile(dest, overwrite: true);
-                }
-            }
-            File.Delete(tempZip);
-
-            SetProgress("Relance…");
-            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
-
-            Environment.Exit(0);
-        }
-        catch
-        {
-            if (File.Exists(tempZip)) { try { File.Delete(tempZip); } catch { } }
-            if (File.Exists(oldExe) && !File.Exists(exePath))
-            {
-                try { File.Move(oldExe, exePath); } catch { }
-            }
-            if (File.Exists(oldDll) && !File.Exists(dllPath))
-            {
-                try { File.Move(oldDll, dllPath); } catch { }
-            }
-            throw;
-        }
+        SetProgress(owner, "Installation et relance…");
+        um.ApplyUpdatesAndRestart(info.TargetFullRelease);
     }
 
     public static async Task PromptUpdateAsync(Form owner)
     {
-        var info = await CheckAsync();
-        if (info == null)
+        var update = await CheckAsync();
+        if (update == null)
         {
             MessageBox.Show(owner, "Tu es à jour !", "Team Launcher");
             return;
         }
 
         var result = MessageBox.Show(owner,
-            $"Nouvelle version disponible : v{info.Value.Version}\n\n" +
+            $"Nouvelle version disponible : v{update.Value.Version}\n\n" +
             $"Tu es en v{CurrentVersion}\n\n" +
-            $"Changelog :\n{info.Value.Changelog}\n\n" +
+            $"Changelog :\n{update.Value.Notes}\n\n" +
             $"Mettre à jour maintenant ?",
             "Team Launcher — Mise à jour",
             MessageBoxButtons.YesNo, MessageBoxIcon.Information);
@@ -195,7 +109,7 @@ public static class UpdateService
         {
             try
             {
-                await UpdateAsync(info.Value.Url, owner);
+                await UpdateAsync(owner);
             }
             catch (Exception ex)
             {
@@ -203,5 +117,10 @@ public static class UpdateService
                 owner.Text = "Team Launcher";
             }
         }
+    }
+
+    private static void SetProgress(Form form, string msg)
+    {
+        try { form.BeginInvoke(() => form.Text = $"Team Launcher — {msg}"); } catch { }
     }
 }

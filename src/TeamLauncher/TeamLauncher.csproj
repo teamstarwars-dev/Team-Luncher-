@@ -7,9 +7,10 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>TeamLauncher.ico</ApplicationIcon>
-    <Version>4.2.1.0</Version>
-    <AssemblyVersion>4.2.1.0</AssemblyVersion>
-    <FileVersion>4.2.1.0</FileVersion>
+    <Version>4.2.2.0</Version>
+    <AssemblyVersion>4.2.2.0</AssemblyVersion>
+    <FileVersion>4.2.2.0</FileVersion>
+    <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
 
   <ItemGroup>

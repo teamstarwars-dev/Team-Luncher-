@@ -1,8 +1,7 @@
 namespace TeamLauncher;
 
 /// <summary>
-/// Mise à jour du launcher via GitHub Releases + version.json.
-/// Remplace l'ancien système Velopack.
+/// Mise à jour du launcher via Velopack + GitHub Releases.
 /// </summary>
 public static class UpdateChecker
 {
@@ -22,7 +21,7 @@ public static class UpdateChecker
 
             return $"Nouvelle version disponible : v{info.Value.Version}\n\n" +
                    $"Tu es en v{UpdateService.CurrentVersion}\n\n" +
-                   $"Changelog :\n{info.Value.Changelog}";
+                   $"Changelog :\n{info.Value.Notes}";
         }
         catch (Exception ex)
         {

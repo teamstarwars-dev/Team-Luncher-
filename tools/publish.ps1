@@ -13,8 +13,8 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
-Write-Host "==> Build autonome win-x64..." -ForegroundColor Cyan
-dotnet publish "$root\src\TeamLauncher" -c Release -r win-x64 --self-contained true -o "$root\dist-autonome"
+Write-Host "==> Build framework-dependent win-x64..." -ForegroundColor Cyan
+dotnet publish "$root\src\TeamLauncher" -c Release -r win-x64 --self-contained false -o "$root\dist-autonome"
 if ($LASTEXITCODE -ne 0) { throw "Échec du build." }
 
 Write-Host "==> Package Velopack v$Version..." -ForegroundColor Cyan

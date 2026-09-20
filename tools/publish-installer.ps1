@@ -17,9 +17,9 @@ Write-Host "  Version: $Version" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Build self-contained
-Write-Host "==> [1/3] Build autonome win-x64..." -ForegroundColor Yellow
-dotnet publish "$root\src\TeamLauncher" -c Release -r win-x64 --self-contained true -o "$root\dist"
+# 1. Build framework-dependent (utilise le .NET 8 déjà installé → moins de RAM)
+Write-Host "==> [1/3] Build framework-dependent win-x64..." -ForegroundColor Yellow
+dotnet publish "$root\src\TeamLauncher" -c Release -r win-x64 --self-contained false -o "$root\dist"
 if ($LASTEXITCODE -ne 0) { throw "Echec du build." }
 
 $exePath = Join-Path $root "dist\TeamLauncher.exe"
